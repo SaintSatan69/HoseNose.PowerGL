@@ -32,9 +32,6 @@ $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 3.0 -posy 5.0 -posz 3.0 -texturepath "C:\Github\HoseRenderer\Randompictures\white.png" -Collision 1 -Controllable 1 -player 1
 $shapecount++
 $Shape_array += $shape
-$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 5.0 -posy 5.0 -posz 5.0 -texturepath "C:\Github\HoseRenderer\Randompictures\Stress_test\Max_hays.png" -ismodel:$true -ModelFile "C:\Github\HoseRenderer\Model\Sphere.model" -shaderpath "C:\Github\HoseRenderer\Shaders\Model.vert" -FragmentPath "C:\github\HoseRenderer\Shaders\Model.frag"
-$shapecount++
-$Shape_array += $shape
 $e = [gc]::GetTotalAllocatedBytes($true)
 Write-Output "the end total of shapes is $shapecount using $($e - $s) bytes"
 initialize-PowerGL -phase 1
