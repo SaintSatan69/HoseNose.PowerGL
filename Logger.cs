@@ -6,6 +6,7 @@ namespace HoseRenderer
         public readonly string Source;
         public Logger(string source) { 
             Source = source;
+            GenerateLogsFolder();
         }
         public void Log(string message) {
             string PathRoot = ".\\Logs\\";
@@ -38,6 +39,14 @@ namespace HoseRenderer
                 bytes.Add((byte)Message[i]);
             }
             return bytes.ToArray();
+        }
+        private static void GenerateLogsFolder()
+        {
+            string logsfolder = Directory.GetCurrentDirectory() + "\\Logs";
+            if (!Directory.Exists(logsfolder))
+            {
+                Directory.CreateDirectory(logsfolder);
+            }
         }
     }
 }

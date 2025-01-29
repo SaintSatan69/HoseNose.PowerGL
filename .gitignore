@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+
+#project specific pictures that need to go bye bye or random folders 
+*/randompictures/stress_test
+
 # User-specific files
 *.rsuser
 *.suo
