@@ -6,7 +6,7 @@
 
 #project specific pictures that need to go bye bye or random folders 
 */randompictures/stress_test
-*/PowerGL/IGN-*.ps1
+/PowerGL/IGN-*.*
 
 # User-specific files
 *.rsuser
