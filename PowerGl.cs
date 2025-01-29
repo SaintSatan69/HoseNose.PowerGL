@@ -151,21 +151,12 @@ namespace HoseRenderer
             public float Culling_Distance { get; set; } = 200f;
             public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collison,Vector3 momentum,float boingfactor,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
             {
-                //  float[]? normaizationvectors, float[]? ufloats, float[]? vfloats,
                 Console.WriteLine("Creating new instance of Shape object");
                 ShapeName = shapename;
-                //Shapepoints = GetnumShapePoints(shapename);
                 Position = position;
                 ShapeNum = shapenum;
                 Size = size;
                 HasCollison = Collison;
-                //if (normaizationvectors != null && ufloats != null && vfloats != null) {
-                //    Vertices = GenerateVertices(Shapepoints, position, normaizationvectors, ufloats, vfloats, shapename);
-                //}
-                //else
-                //{
-                //    Vertices = GenerateVertices(Shapepoints, Position, NormalizationFloats, Ufloat, Vfloat, shapename);
-                //}
                 Reflective = reflective;
                 LightEmitting = glowy;
                 RotationVector = rotationvector;
@@ -248,7 +239,6 @@ namespace HoseRenderer
                     }
                     else
                     {
-                        //Textures for some reason is not attaching to the shape, gotta debug hopefully its just just a button somewhere i forgot to add in.
                         this.CompiledTexture = new Texture(this.Glcontext, this.TexturePath);
                         Console.WriteLine($"Texture Compilation Complete on shape num {this.ShapeNum}");
                     }
@@ -443,7 +433,6 @@ namespace HoseRenderer
                     var specularmap = this.CompiledSpecularMap;
                     diffusemap.Bind(TextureUnit.Texture0);
                     specularmap.Bind(TextureUnit.Texture1);
-                    //TODO finish making the .render() method by the logic stored in the to be removed hoseshapetexture.createamndbindtextures ( run gotta remove a bunch of stuff from this since i don't need to do some math)
                     shader.SetUniform("material.diffuse", 0);
                     shader.SetUniform("material.specular", 1);
                     shader.SetUniform("material.shininess", (float)this.Shininess);
@@ -454,11 +443,6 @@ namespace HoseRenderer
                     shader.SetUniform("light.specular", new Vector3(1.0f, 1.0f, 1.0f));
                     shader.SetUniform("viewPos", camera.Position);
                 }
-                //else
-                //{
-                //  shader.SetUniform("uTexture0", 0);
-                //}
-                //TODO MAKE THE MAGIC MOVE THE OBJECT TO ITS INITAL POS PROVIDED ADD PROPERTIES ON OBJECT CTOR FOR XYZ THAT FEEDS OFF OF THE VECTOR3 PARAM AND THEN ADD A METHOD FOR ONLOAD() THATS CALLED .GLUESHAPE(). ( DONE! wasn't that bad)
                 
                 //only took 2 weeks to find this bug |:(
                 DebugMessages.PrintDebugMSG("Applied magic to cube to make it actually show up",Print_debug_msg);
@@ -552,8 +536,6 @@ namespace HoseRenderer
                 if (GL == null) {
                     throw new AnomalousObjectException("You done royally fucked up to get here, you've managed to get past the check of having an OPENGL context on compiling and rending, we obviously can't draw the triangles if theres no place to put the fucking things");
                 } else {
-                    //this.Glcontext.DrawArrays(PrimitiveType.Triangles, 0, (uint)this.Vertices.Length);
-                    //THIS FUCKING CUBE WONT RENDER WHAT IS ITS PROBLEM
                     if (!this.IsModel) {
                         GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
                     }
@@ -581,119 +563,6 @@ namespace HoseRenderer
                     this.TerminalVelocity = Math.Sqrt((2 * this.Mass * this.Gravity));
                 }
             }
-
-
-            //THIS IS TERRIBLE BUT IT SEEMS TO WORK IDK ( IT DOESN't WORK NOTHING FUCKING WORKS HERE) ((THIS WILL LIKELY BE REMOVED AS ITS NOT NEEDED: PLZ NO FORGOR ME)) 
-            //private static uint GetnumShapePoints(string shapeName)
-            //{
-            //    foreach (var Shape in Enum.GetValues<Shapes>())
-            //    {
-            //        if (Shape.ToString() == shapeName)
-            //        {
-            //            return (uint)Shape;
-            //        }
-            //    }
-            //    throw new Exception($"Shape:{shapeName} is not in the enum Shapes");
-            //}
-            //private enum Shapes
-            //{
-            //    Pyramid = 5,
-            //    Cube = 8,
-            //}
-            ////FUCKING USELESS MATH WILL GET RID OF MAYBE
-            //private static float[] GenerateVertices(uint shapePoints, Vector3 Postion, float[] Noramalizationvector, float[]? ufloat, float[]? vfloat, string ShapeName)
-            //{
-            //    List<float> verticeslist = new List<float>();
-            //    float normx;
-            //    float normy;
-            //    float normz;
-            //    float internalufloat;
-            //    float internalvfloat;
-            //    for (var i = 0; i < shapePoints; i++)
-            //    {
-                    
-            //        Vector3 calcVecOff = CalulateVectorOffsets(i, ShapeName);
-            //        float posx = calcVecOff.X + Postion.X;
-            //        float posy = calcVecOff.Y + Postion.Y;
-            //        float posz = calcVecOff.Z + Postion.Z;
-            //        if (Noramalizationvector != null && Noramalizationvector.Length > 0)
-            //        {
-            //            normx = Noramalizationvector[i * 3];
-            //            normy = Noramalizationvector[i * 3 + 1];
-            //            normz = Noramalizationvector[i * 3 + 2];
-            //        }
-            //        else
-            //        {
-            //            throw new Exception("SHAPE_NORMAIZATION_FLOATS_NULL");
-            //        }
-            //        if (ufloat != null && ufloat.Length > 0)
-            //        {
-            //            internalufloat = ufloat[i];
-            //        }
-            //        else
-            //        {
-            //            internalufloat = 0f;
-            //        }
-            //        if (vfloat != null && vfloat.Length > 0)
-            //        {
-            //            internalvfloat = vfloat[i];
-            //        }
-            //        else
-            //        {
-            //            internalvfloat = 0f;
-            //        }
-            //        verticeslist.Add(posx);
-            //        verticeslist.Add(posy);
-            //        verticeslist.Add(posz);
-            //        verticeslist.Add(normx);
-            //        verticeslist.Add(normy);
-            //        verticeslist.Add(normz);
-            //        verticeslist.Add(internalufloat);
-            //        verticeslist.Add(internalvfloat);
-            //    }
-            //    float[] vertices = verticeslist.ToArray();
-            //    return vertices;
-            //}
-            //private static float[] GetInitalVectors(string shapeName)
-            //{
-            //    float[] ShapeOffSetVectors = [];
-            //    if (shapeName == "Cube")
-            //    {
-            //        float[] ShapeOffsetVectors =
-            //        {
-            //        0f, 0f, 0f,
-            //        1f, 0f, 0f,
-            //        1f, 1f, 0f,
-            //        1f, 1f, 1f,
-            //        0f, 1f, 1f,
-            //        0f, 0f, 1f,
-            //        0f, 1f, 0f,
-            //        1f, 0f, 1f
-            //    };
-            //        ShapeOffSetVectors = ShapeOffsetVectors;
-            //    }
-            //    if (shapeName == "Pyramid")
-            //    {
-            //        float[] ShapeOffsetVectors =
-            //        {
-            //        0f, 0f, 0f,
-            //        1f, 0f, 0f,
-            //        1f, 0f, 1f,
-            //        0f, 0f, 1f,
-            //        0.5f, 1f, 0.5f
-            //    };
-            //        ShapeOffSetVectors = ShapeOffsetVectors;
-            //    }
-            //    return ShapeOffSetVectors;
-            //}
-            //private static Vector3 CalulateVectorOffsets(int Row, string shapeName)
-            //{
-            //    var initalvectors = GetInitalVectors(shapeName);
-            //    float x = initalvectors[Row * 3];
-            //    float y = initalvectors[Row * 3 + 1];
-            //    float z = initalvectors[Row * 3 + 2];
-            //    return new Vector3(x, y, z);
-            //}
             private void BuildBoundingBox()
             {
                 this._BB_MIN_X = PosX - Size - StrX;

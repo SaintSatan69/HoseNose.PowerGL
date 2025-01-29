@@ -33,7 +33,7 @@ namespace HoseRenderer
             }
             public int WriteString(string outstr)
             {
-                //TODO: FIX THIS SINCE THIS IS PROBLEM WITH THE READER
+                //MS Why in your own docs did you forget Unicode is 2 bytes instead of 1 per character
                 byte[] outbuffer = encoding.GetBytes(outstr);
                 int len = outstr.Length * 2;
                 if (len > UInt16.MaxValue) { 

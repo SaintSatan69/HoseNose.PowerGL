@@ -9,7 +9,7 @@ namespace HoseRenderer
             GenerateLogsFolder();
         }
         public void Log(string message) {
-            string PathRoot = ".\\Logs\\";
+            string PathRoot = MainRenderer.Application_Directory + "\\Logs\\";
             string Filepath = PathRoot + this.Source + ".log";
             if (File.Exists(Filepath)) { 
                 var FileLoc = File.Open(Filepath, FileMode.Append);
@@ -42,7 +42,7 @@ namespace HoseRenderer
         }
         private static void GenerateLogsFolder()
         {
-            string logsfolder = Directory.GetCurrentDirectory() + "\\Logs";
+            string logsfolder = MainRenderer.Application_Directory + "\\Logs";
             if (!Directory.Exists(logsfolder))
             {
                 Directory.CreateDirectory(logsfolder);

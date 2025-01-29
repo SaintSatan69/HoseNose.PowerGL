@@ -55,11 +55,6 @@ namespace HoseRenderer
 
         private static string[] FLAGS = new string[10];
 
-        private static float[] shapeverts = new float[1];
-        private static List<float> shapevertfloats;
-
-        private static uint shapespresent = 0;
-
         private static Dictionary<string,Texture> _Name_to_texture_dict = new();
 
         private static int _Frame_counter = 0;
@@ -192,7 +187,7 @@ namespace HoseRenderer
             var Platforms = Window.Platforms.Count;
             Console.WriteLine($"Num of platforms: {Platforms}");
             window = Window.Create(options);
-            //why must techonology not like powershell :( (we are cheating by having powershell just do the control of shapes, the shape properties and when this program is launched leaving
+            //why must techonology not like powershell :( (we are cheating by having powershell just do the control of shapes engine, the shape properties and when this program is launched leaving
             //this to do the rendering calls to OpenGL through Silk.Net)
             Console.WriteLine($"{window.API.API} {window.WindowState}");
             
@@ -259,14 +254,11 @@ namespace HoseRenderer
             Console.WriteLine($"Shapes array from LOAD_OBJECTS:{Shapes.Length}");
             //guiController = new(Gl,window,input);
 
-            //For future me this is where we left off, making all the VBO things to bind all the funs
             Ebo = new BufferObject<uint>(Gl, Indices, BufferTargetARB.ElementArrayBuffer);
             Vbo = new BufferObject<float>(Gl, Vertices, BufferTargetARB.ArrayBuffer);
             VaoCube = new VertexArrayObject<float, uint>(Gl, Vbo, Ebo);
             if (Shapes.Length == 0 || FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS") {
                 DebugMessages.PrintDebugMSG("Rending Default Cubes");
-                //Vbo = new BufferObject<float>(Gl, Vertices, BufferTargetARB.ArrayBuffer);
-                //VaoCube = new VertexArrayObject<float, uint>(Gl, Vbo, Ebo);
 
                 VaoCube.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 8, 0);
                 VaoCube.VertexAttributePointer(1, 3, VertexAttribPointerType.Float, 8, 3);
@@ -324,18 +316,8 @@ namespace HoseRenderer
                     {
                         Shapes[i].Debug = 1;
                     }
-                    // WHY DO ARRAYS HAVE TO BE SUCH A PAIN  IN THE ASS ( will get removed)
-                    //var theverts = Shapes[i].Vertices;
-                    //for (int j = 0; j < theverts.Length; j++)
-                    //{
-                    //    shapevertfloats.Add(theverts[j]);
-                    //}
                 }
-                //shapeverts = shapevertfloats.ToArray();
-                //shapevbo = new BufferObject<float>(Gl, shapeverts, BufferTargetARB.ArrayBuffer);
-                //shapeVAO = new VertexArrayObject<float, uint>(Gl, shapevbo, Ebo);
                 for (uint i = 0; i < Shapes.Length; i++) {
-                    //shapeVAO.VertexAttributePointer(i, 3, VertexAttribPointerType.Float, 8, 3 * (int)i);
                     if (FLAGS[1]=="" || FLAGS[1] == null) {
                         VaoCube.VertexAttributePointer(i, 3, VertexAttribPointerType.Float, 8, 3 * (int)i);
                         if (FLAGS[2] == "DEBUG")
@@ -353,11 +335,6 @@ namespace HoseRenderer
                         }
                     }
                 }
-                //shapespresent = 1;
-                //for (int i = 0; i < shapeverts.Length; i++) {
-                    //Console.Write($"{shapeverts[i]}:{i} ");
-                //}
-                //Console.WriteLine();
             }
             if (FLAGS[2] == "DEBUG") {
                 foreach (var _texture_name_mapper in _Name_to_texture_dict)

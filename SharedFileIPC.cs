@@ -43,7 +43,6 @@ namespace HoseRenderer
             var utfreader = new Utf8JsonReader(Jsonbyte);
             return JsonSerializer.Deserialize<Shape[]>(ref utfreader);
         }
-        //actually implement the named pipes you crack head so that powershell can instruct the program on moving objects around
         public static PowerGLPipe AttachToOrchastratorNamedPipe()
         {
             var pipeClient = new NamedPipeClientStream(".","PowerGL",PipeDirection.InOut,PipeOptions.None,TokenImpersonationLevel.Impersonation);
