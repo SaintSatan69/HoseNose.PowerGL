@@ -14,9 +14,6 @@ namespace HoseRenderer
             [JsonInclude]
             [JsonRequired]
             public string ShapeName { get; private set; } = "Cube";
-            //[JsonInclude]
-            //[JsonRequired]
-            //public uint Shapepoints { get; private set; }
             [JsonInclude]
             [JsonRequired]
             public Vector3 Position { get; set; } = new Vector3(0f, 0f, 0f);
@@ -29,18 +26,6 @@ namespace HoseRenderer
             [JsonInclude]
             [JsonRequired]
             public float PosZ { get; set; } = 0f;
-            //[JsonInclude]
-            //[JsonRequired]
-            //public float[] Vertices { get; private set; }
-            //[JsonInclude]
-            //[JsonRequired]
-            //public float[] Ufloat { get; private set; } = new float[] { 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
-            //[JsonInclude]
-            //[JsonRequired]
-            //public float[] Vfloat { get; private set; } = new float[] { 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
-            //[JsonInclude]
-            //[JsonRequired]
-            //public float[] NormalizationFloats { get; private set; } = new float[] { 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f };
             [JsonInclude]
             [JsonRequired]
             public string? TexturePath { get; set; }
