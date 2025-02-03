@@ -10,9 +10,8 @@ Import-Module $PowerGL_DLL
 
 [HoseRenderer.MainRenderer]::PrintFunnyLogo()
 
+$Script:ProgramDirectory = $PSScriptRoot
+
 foreach ($file in (Get-ChildItem $PSScriptRoot\public\*.ps1)) {
     . $file.FullName
 }
-
-#another note to me when i wake up and forgot everything i did, WE WON'T NEED TO MAKE A FUNCTION FOR WRITING TO NAMED PIPE, JUST USE THE .WRITEDIRECTIVE METHOD ON THE NAMEDPIPESERVER OBJECT RETURNED FROM INITALIZE-POWERGL
-#PHASE 3 WITH THE SHAPE OBJECTS TO BE WRITTEN.

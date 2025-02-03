@@ -222,7 +222,7 @@ namespace HoseRenderer
             window.Closing += OnClose;
             window.Run();
             window.Dispose();
-            SharedFileIPC.UninitalizeFileIPC();
+            SharedFileIPC.UninitalizeFileIPC(@$"{Application_Directory}\IPCFiles");
         }
         public static void LoadObjects() {
             try
