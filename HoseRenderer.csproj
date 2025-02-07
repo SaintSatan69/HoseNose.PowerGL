@@ -47,6 +47,9 @@
     <None Update="Model\cube.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Model\Sphere.model">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="PowerGL\PowerGL.psm1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -100,5 +103,9 @@
     <Folder Include="IPCFiles\" />
     <Folder Include="Logs\" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="pwsh -file C:\Github\RendererTestingGround\BuildTestingScript.ps1 -BUILD $(Configuration)" />
+  </Target>
 
 </Project>
