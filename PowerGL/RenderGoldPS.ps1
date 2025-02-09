@@ -1,4 +1,4 @@
-import-module C:\Github\HoseRenderer\PowerGL\PowerGL.psm1
+import-module $psscriptroot\PowerGL.psm1
 $s = [GC]::GetTotalAllocatedBytes($true)
 $shapecount = 0
 $Shape_array = @()

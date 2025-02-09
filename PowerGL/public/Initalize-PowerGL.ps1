@@ -4,9 +4,7 @@ function Initialize-PowerGL() {
         [int]$phase = 1,
         [array]$shapesarray
     )
-
-    $pre_IPC_DIR = "$($Script:ProgramDirectory)\..\IPCFiles"
-    $IPC_DIR = [System.IO.Path]::GetFullPath($pre_IPC_DIR)
+    $IPC_DIR = [System.IO.Path]::GetFullPath($script:IPC_FOLDER)
     switch ($phase) {
         1 { 
             [HoseRenderer.SharedFileIPC]::InitalizeFileIPC($IPC_DIR) 
@@ -21,5 +19,4 @@ function Initialize-PowerGL() {
             throw "Intialization Phase Not Provided or Invalid, Phase 1 is building the inital files to dump the shape objects onto disk for the other program. Phase 3 is the contruction of a NamedPipe for the Powershell process to control the rendering process's shapes"
         }
     }
-    
 }
