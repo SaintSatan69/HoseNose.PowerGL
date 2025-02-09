@@ -9,8 +9,14 @@ namespace HoseRenderer
 {
     namespace PowerGl
     {
+        //<summary>
+        //This Class Object is the object representing a singular shape/modle in 3D space
+        //</summary>
         public class Shape
         {
+            //<summary>
+            //The Shape name, not super important but if you want to include it to keep tabs on it from powershell thats acceptable
+            //</summary>
             [JsonInclude]
             [JsonRequired]
             public string ShapeName { get; private set; } = "Cube";

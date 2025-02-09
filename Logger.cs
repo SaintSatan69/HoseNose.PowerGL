@@ -4,13 +4,21 @@ namespace HoseRenderer
     public class Logger
     {
         public readonly string Source;
-        public Logger(string source) { 
+        public readonly string Log_Directory;
+        public Logger(string source,string? logfilefoler) { 
             Source = source;
-            GenerateLogsFolder();
+            if (logfilefoler != null) {
+                Log_Directory = logfilefoler;
+            }
+            else
+            {
+                Log_Directory = $@"C:\users\{Environment.UserName}\appdata\local\temp\PowerGL\logs";
+            }
+            this.GenerateLogsFolder();
         }
         public void Log(string message) {
-            string PathRoot = MainRenderer.Application_Directory + "\\Logs\\";
-            string Filepath = PathRoot + this.Source + ".log";
+            string PathRoot = this.Log_Directory;
+            string Filepath = PathRoot + @"\" + this.Source + ".log";
             if (File.Exists(Filepath)) { 
                 var FileLoc = File.Open(Filepath, FileMode.Append);
                 var data = MessageToByte(message);
@@ -24,6 +32,7 @@ namespace HoseRenderer
                     var FileLoc = File.Open(Filepath, FileMode.Open, FileAccess.ReadWrite);
                     var data = MessageToByte(message);
                     FileLoc.Write(data, 0, data.Length);
+                    FileLoc.Close();
                 }
                 catch(Exception ex) {
                     string exceptionmessage = "Error in writing bytes to filesteam of the provider agent: " + this.Source + " by:" + (ex.GetType().ToString());
@@ -40,9 +49,9 @@ namespace HoseRenderer
             }
             return bytes.ToArray();
         }
-        private static void GenerateLogsFolder()
+        private void GenerateLogsFolder()
         {
-            string logsfolder = MainRenderer.Application_Directory + "\\Logs";
+            string logsfolder = this.Log_Directory;
             if (!Directory.Exists(logsfolder))
             {
                 Directory.CreateDirectory(logsfolder);

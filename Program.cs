@@ -65,16 +65,16 @@ namespace HoseRenderer
         private static uint _player_2_controllerObject;
         private static float _player_speed =  0.01f;
 
-        private static readonly string _internal_app_dir = Directory.GetCurrentDirectory();
-        public static string Application_Directory { get => _internal_app_dir;}
+        public static readonly string Application_Directory = @"C:\Program Files\PowerShell\7-preview\Modules\PowerGL";
 
+        public static readonly string UserDir = @$"C:\users\{Environment.UserName}\appdata\local\temp";
         //threading things
         private static Thread PipeThread;
         private static string _Pipe_THREAD_DATA = "";
 
         private static Thread FPS_Thread;
         private static uint FPS;
-
+        
         //TODO make this thread pool spawn a thread for every 1000 shapes added so the computer doesn't melt trying to render 10k on a single thread and have the FPS be a nice 10 frames per milenium ( THIS IS VERY BUGGY)
         private static Thread[] ThreadPoolRenderer;
 
@@ -196,7 +196,6 @@ namespace HoseRenderer
             //Shape[] shape = new Shape[2];
             //shape[0] = new Shape("Cube", new Vector3(2f, 3f, 3f), 1, 0, 0, null, null, null, null, null, ".\\randompictures\\silk.png", Vector3.Zero,1.0f, new Vector3(0.0f,0.0f,0.0f));
             //shape[1] = new Shape("Cube", new Vector3(1f, 1f, 0f), 2, 0, 0, null, null, null, null, null, ".\\randompictures\\PDQ_wallpaper.png", new Vector3(0.0f,0.0f,0.0f),2.0f, new Vector3(0.5f,0.0f,0.0f));
-            //SharedFileIPC.WriteFileIPC(shape);
 
             if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE") {
                 //VERY LIKELY CHANCE WE GET A RACE CONDITION BECAUSE BOTH PROGRAMS ARE SINGLE THREADED FOR ALL THEIR LOGIC BESIDES IN LIBRARIES AND OTHER THINGS SO WE CAN JUST SLEEP THE APPLICATION ONCE
@@ -222,7 +221,6 @@ namespace HoseRenderer
             window.Closing += OnClose;
             window.Run();
             window.Dispose();
-            SharedFileIPC.UninitalizeFileIPC();
         }
         public static void LoadObjects() {
             try
@@ -264,16 +262,16 @@ namespace HoseRenderer
                 VaoCube.VertexAttributePointer(1, 3, VertexAttribPointerType.Float, 8, 3);
                 VaoCube.VertexAttributePointer(2, 2, VertexAttribPointerType.Float, 8, 6);
 
-                LightingShader = new Shader(Gl, ".\\Shaders\\shader.vert", ".\\Shaders\\lighting.frag");
+                LightingShader = new Shader(Gl, $"{Application_Directory}\\Shaders\\shader.vert", $"{Application_Directory}\\Shaders\\lighting.frag");
 
-                LampShader = new Shader(Gl, ".\\Shaders\\shader.vert", ".\\Shaders\\shader.frag");
+                LampShader = new Shader(Gl, $"{Application_Directory}\\Shaders\\shader.vert", $"{Application_Directory}\\Shaders\\shader.frag");
 
-                DiffuseMap = new Texture(Gl, ".\\randompictures\\silkBoxed.png");
-                SpecularMap = new Texture(Gl, ".\\randompictures\\silkSpecular.png");
+                DiffuseMap = new Texture(Gl, $"{Application_Directory}\\randompictures\\silkBoxed.png");
+                SpecularMap = new Texture(Gl, $"{Application_Directory}\\randompictures\\silkSpecular.png");
 
-                shader = new Shader(Gl, ".\\Shaders\\Model.vert", ".\\Shaders\\Model.frag");
-                texture = new Texture(Gl, ".\\Randompictures\\silk.png");
-                model = new Model(Gl, ".\\Model\\cube.model");
+                shader = new Shader(Gl, $"{Application_Directory}\\Shaders\\Model.vert", $"{Application_Directory}\\Shaders\\Model.frag");
+                texture = new Texture(Gl, $"{Application_Directory}\\Randompictures\\silk.png");
+                model = new Model(Gl, $"{Application_Directory}\\Model\\cube.model");
             }
             var size = window.FramebufferSize;
             Camera = new Camera(new Vector3(-6.0f,0.0f,6.0f), Vector3.UnitX, Vector3.UnitY, (float)size.X / size.Y);
@@ -693,7 +691,6 @@ namespace HoseRenderer
             }
             else
             {
-                //shapevbo.Dispose();
                 VaoCube.Dispose();
             }
             Ebo.Dispose();

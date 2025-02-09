@@ -9,37 +9,53 @@ namespace HoseRenderer
 {
     public class SharedFileIPC
     {
-        private static string shapePath = ".\\IPCFiles\\Shape.POWERGLSHAPE";
-        private static Logger logger = new Logger("IPC");
-        public static void InitalizeFileIPC()
+        private static Logger logger = new Logger("IPC",null);
+        public static void InitalizeFileIPC(string IPCFOLDERPATH)
         {
-            Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
-            File.Create(shapePath).Close();
+            //Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
+            File.Create((IPCFOLDERPATH + @"\Shape.POWERGLSHAPE")).Close();
             logger.Log("Application IPC Initialized with no problems");
         }
-        public static void UninitalizeFileIPC() 
+        public static void UninitalizeFileIPC(string IPCFOLDERPATH) 
         {
             try
             {
-                Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
-                File.Delete(shapePath);
+                //Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
+                File.Delete(IPCFOLDERPATH + @"\Shapes.POWERGLSHAPE");
                 logger.Log("Application IPC Uninitilize with no problems");
             }
             catch { }
         }
-        public static void WriteFileIPC(Shape[] ShapeObject)
+        public static void WriteFileIPC(string IPCFOLDERPATH, Shape[] ShapeObject)
         {
-            Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
+            //Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
             //serialization apparently doesn't like Vector3s Debugging is last thing needed before HoseRenderer.PowerGL.Shapes can contain a method of .Render() ( The Solution, 3 Other
             //Properties that gets glued back into a vect3)
-            Stream stream = File.Open(shapePath,FileMode.Append);
+            Stream stream = File.Open(IPCFOLDERPATH + @"\Shape.POWERGLSHAPE",FileMode.Append);
             stream.Write(JsonSerializer.SerializeToUtf8Bytes(ShapeObject,JsonSerializerOptions.Default));
             stream.Close();
         }
         public static Shape[] ReadShapeIPC() 
         {
-            Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
-            var Jsonbyte = File.ReadAllBytes(shapePath);
+            string shapepath = "";
+            if (File.Exists(@$"{MainRenderer.Application_Directory}\IPCFILES\Shape.POWERGLSHAPE"))
+            {
+                shapepath = @$"{MainRenderer.Application_Directory}\IPCFILES\Shape.POWERGLSHAPE";
+            }
+            if (File.Exists(@$"C:\users\{Environment.UserName}\appdata\local\temp\PowerGL\IPCFILES\Shape.POWERGLSHAPE"))
+            {
+                shapepath = @$"C:\users\{Environment.UserName}\appdata\local\temp\PowerGL\IPCFILES\Shape.POWERGLSHAPE";
+            }
+            //Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
+            //if (shapePath != @$"{MainRenderer.Application_Directory}\IPCFILES\Shape.POWERGLSHAPE")
+            //{
+            //    shapePath = @$"{MainRenderer.Application_Directory}\IPCFILES\Shape.POWERGLSHAPE";
+            //} 
+            if (shapepath == "")
+            {
+                throw new Exception("IPC");
+            }
+            var Jsonbyte = File.ReadAllBytes(shapepath);
             var utfreader = new Utf8JsonReader(Jsonbyte);
             return JsonSerializer.Deserialize<Shape[]>(ref utfreader);
         }
