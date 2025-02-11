@@ -14,6 +14,9 @@ using System.Drawing;
 
 namespace HoseRenderer
 {
+    /// <summary>
+    /// This is the cursed C# powered PowerShell OpenGL rendering engine because making something practical is no fun anyways
+    /// </summary>
     public class MainRenderer
     {
 #pragma warning disable CS8618 
@@ -65,8 +68,13 @@ namespace HoseRenderer
         private static uint _player_2_controllerObject;
         private static float _player_speed =  0.01f;
 
+        /// <summary>
+        /// Used By Other Objects the Static Directory of the powershell 7-preview Modules folder so that all objects that need to reference files inside the engine know where it is on the filesystem
+        /// </summary>
         public static readonly string Application_Directory = @"C:\Program Files\PowerShell\7-preview\Modules\PowerGL";
-
+        /// <summary>
+        /// The Full path to the current users temp folder for use with the file IPC and logging
+        /// </summary>
         public static readonly string UserDir = @$"C:\users\{Environment.UserName}\appdata\local\temp";
         //threading things
         private static Thread PipeThread;
@@ -135,7 +143,10 @@ namespace HoseRenderer
             0, 1, 3,
             1, 2, 3
         };
-
+        /// <summary>
+        /// thanks VS I totally need a summary of the Main function Who doesn't know what this does and programs C# ???????
+        /// </summary>
+        /// <param name="args"></param>
         public static void Main(string[] args)
         {
             if (args.Length > 0) {
@@ -222,6 +233,9 @@ namespace HoseRenderer
             window.Run();
             window.Dispose();
         }
+        /// <summary>
+        /// Calls the ReadShapeIPC and either retrives the shapes[] stored in the users temp folder and stores it into the engines Shapes variable or does nothing and allows the engine to go to default state programmed into the engine itself
+        /// </summary>
         public static void LoadObjects() {
             try
             {
@@ -797,6 +811,9 @@ namespace HoseRenderer
                 }
             }
         }
+        /// <summary>
+        /// Prints the PowerGL Logo (not copyrighted I couldn't be arsed)
+        /// </summary>
         public static void PrintFunnyLogo()
         {
             Console.WriteLine("                                                       ");

@@ -1,10 +1,24 @@
 ﻿
 namespace HoseRenderer
 {
+    /// <summary>
+    /// A class that handles internal logging of the program and powershell so that if something goes wrong its easier to see what is broken
+    /// </summary>
     public class Logger
     {
+        /// <summary>
+        /// Source is the Source of logs such as the IPC initialization or powershell processing something
+        /// </summary>
         public readonly string Source;
+        /// <summary>
+        /// the directory that logs go in will default to the users temp folder
+        /// </summary>
         public readonly string Log_Directory;
+        /// <summary>
+        /// the Logger CTOR IDK what else im supposed to say
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="logfilefoler"></param>
         public Logger(string source,string? logfilefoler) { 
             Source = source;
             if (logfilefoler != null) {
@@ -16,6 +30,11 @@ namespace HoseRenderer
             }
             this.GenerateLogsFolder();
         }
+        /// <summary>
+        /// writes a message provided to the respective log file in a non-overwriting way 
+        /// </summary>
+        /// <param name="message"></param>
+        /// <exception cref="Exception"></exception>
         public void Log(string message) {
             string PathRoot = this.Log_Directory;
             string Filepath = PathRoot + @"\" + this.Source + ".log";

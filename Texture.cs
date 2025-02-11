@@ -5,13 +5,27 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace HoseRenderer
 {
+    /// <summary>
+    /// From the Silk.Net Tutorials and works well so im not changing it unless needed
+    /// </summary>
     public class Texture : IDisposable
     {
         private uint _handle;
         private GL _gl;
+        /// <summary>
+        /// The path to the image file used for the texture
+        /// </summary>
         public string Path { get; set; }
+        /// <summary>
+        /// the Type of texture defaults to TextureType.None
+        /// </summary>
         public TextureType Type { get; set; }
-
+        /// <summary>
+        /// Builds the image Texture to use with the shape                
+        /// </summary>
+        /// <param name="gl"></param>
+        /// <param name="path"></param>
+        /// <param name="type"></param>
         public unsafe Texture(GL gl, string path, TextureType type = TextureType.None)
         {
             _gl = gl;
@@ -36,6 +50,13 @@ namespace HoseRenderer
             }
             SetParameters();
         }
+        /// <summary>
+        /// Builds a texture out of a byte span
+        /// </summary>
+        /// <param name="gl"></param>
+        /// <param name="data"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
         public unsafe Texture(GL gl, Span<byte> data, uint width, uint height) {
             _gl = gl;
             _handle = _gl.GenTexture();
@@ -57,11 +78,18 @@ namespace HoseRenderer
             _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, 8);
             _gl.GenerateMipmap(TextureTarget.Texture2D);
         }
+        /// <summary>
+        /// Tells OpenGL that this texture is being used at the specified texture spot on a specific shape
+        /// </summary>
+        /// <param name="textureslot"></param>
         public void Bind(TextureUnit textureslot = TextureUnit.Texture0)
         {
             _gl.ActiveTexture(textureslot);
             _gl.BindTexture(TextureTarget.Texture2D, _handle);
         }
+        /// <summary>
+        /// Disposes of the texture
+        /// </summary>
         public void Dispose()
         {
             _gl.DeleteTexture(_handle);

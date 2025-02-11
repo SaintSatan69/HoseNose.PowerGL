@@ -7,15 +7,26 @@ using HoseRenderer.NamedPipes;
 using System.Security.Principal;
 namespace HoseRenderer
 {
+    /// <summary>
+    /// this class handles the file bassed IPC used by powershell to send to the rendering engine so that its easy without named pipes and so that you can make sure an object property is correctly being serialized
+    /// </summary>
     public class SharedFileIPC
     {
         private static Logger logger = new Logger("IPC",null);
+        /// <summary>
+        /// Creates the Shape.POWERGLSHAPE file
+        /// </summary>
+        /// <param name="IPCFOLDERPATH"></param>
         public static void InitalizeFileIPC(string IPCFOLDERPATH)
         {
             //Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
             File.Create((IPCFOLDERPATH + @"\Shape.POWERGLSHAPE")).Close();
             logger.Log("Application IPC Initialized with no problems");
         }
+        /// <summary>
+        /// deletes the Shape.POWERGLSHAPE file
+        /// </summary>
+        /// <param name="IPCFOLDERPATH"></param>
         public static void UninitalizeFileIPC(string IPCFOLDERPATH) 
         {
             try
@@ -26,6 +37,11 @@ namespace HoseRenderer
             }
             catch { }
         }
+        /// <summary>
+        /// write the shapes to the IPC file
+        /// </summary>
+        /// <param name="IPCFOLDERPATH"></param>
+        /// <param name="ShapeObject"></param>
         public static void WriteFileIPC(string IPCFOLDERPATH, Shape[] ShapeObject)
         {
             //Directory.SetCurrentDirectory(@"C:\Github\HoseRenderer\bin\debug\net8.0");
@@ -35,6 +51,13 @@ namespace HoseRenderer
             stream.Write(JsonSerializer.SerializeToUtf8Bytes(ShapeObject,JsonSerializerOptions.Default));
             stream.Close();
         }
+        /// <summary>
+        /// reads the IPC file from disk and returns an array of shape objects if for what ever reason there is an error processing the file such as it doesn't exist it will throw an exception caugh in the main threads loadobject()
+        /// </summary>
+        /// <returns>
+        /// An array of shape objects deserialzed from the IPC file
+        /// </returns>
+        /// <exception cref="Exception"></exception>
         public static Shape[] ReadShapeIPC() 
         {
             string shapepath = "";
@@ -59,6 +82,12 @@ namespace HoseRenderer
             var utfreader = new Utf8JsonReader(Jsonbyte);
             return JsonSerializer.Deserialize<Shape[]>(ref utfreader);
         }
+        /// <summary>
+        /// the named pipe on the client (rendering engine) connection tool
+        /// </summary>
+        /// <returns>
+        /// The PowerGLPipe Client attached to . 
+        /// </returns>
         public static PowerGLPipe AttachToOrchastratorNamedPipe()
         {
             var pipeClient = new NamedPipeClientStream(".","PowerGL",PipeDirection.InOut,PipeOptions.None,TokenImpersonationLevel.Impersonation);
@@ -66,6 +95,10 @@ namespace HoseRenderer
             pipeClient.Connect();
             return new PowerGLPipe(pipeClient);
         }
+        /// <summary>
+        /// Yeet the program from the Named pipe server that is the powershell process
+        /// </summary>
+        /// <param name="Pipe"></param>
         public static void DetachFromOrchastratrorNamedPipe(PowerGLPipe Pipe)
         {
             Pipe.Detach();

@@ -1,6 +1,9 @@
 ﻿using System.Numerics;
 namespace HoseRenderer
 {
+    /// <summary>
+    /// From the Silk.net Docs was used in 2d land and not used anymore but kept just in case
+    /// </summary>
     public class Transform
     {
         public Vector3 Postion {  get; set; } = new Vector3(0,0,0);

@@ -9,116 +9,266 @@ namespace HoseRenderer
 {
     namespace PowerGl
     {
-        //<summary>
-        //This Class Object is the object representing a singular shape/modle in 3D space
-        //</summary>
+        ///<summary>
+        ///This Class Object is the object representing a singular shape/model in 3D space
+        ///</summary>
         public class Shape
         {
-            //<summary>
-            //The Shape name, not super important but if you want to include it to keep tabs on it from powershell thats acceptable
-            //</summary>
+            ///<summary>
+            ///The Shape name, not super important but if you want to include it to keep tabs on it from powershell thats acceptable
+            ///</summary>
             [JsonInclude]
             [JsonRequired]
             public string ShapeName { get; private set; } = "Cube";
+            /// <summary>
+            /// A Vector 3 (x,y,z) that stores the global position of the shape
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public Vector3 Position { get; set; } = new Vector3(0f, 0f, 0f);
+            /// <summary>
+            /// [float] The X component of the Postition needed for the deserialization of the position
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float PosX { get; set; } = 0f;
+            /// <summary>
+            /// [float] The Y component of the Position needed for the deserialization of the position
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float PosY { get; set; } = 0f;
+            /// <summary>
+            /// [float] The Z component of the Position needed for the deserialization of the position
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float PosZ { get; set; } = 0f;
+            /// <summary>
+            /// [string] path to the image that the shape will use as a texture
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public string? TexturePath { get; set; }
+            /// <summary>
+            /// [string] path to the GLSL .vert shader that the shape will use
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public string ShaderVertPath { get; set; }
+            /// <summary>
+            /// [string] path to the GLSL .frag shader that the shape will use 
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public string FragementPath { get; set; }
+            /// <summary>
+            /// [uint] a flag to tell the program that the shape emits light [NOT IMPLEMENTED FULLY]
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public uint LightEmitting { get; private set; } = 0;
+            /// <summary>
+            /// [boolean] a flag to tell the program that this is a model and needs to compile a whole mess of meshes and verticies
+            /// </summary>
             [JsonInclude,JsonRequired]
             public Boolean IsModel { get; private set; } = false;
+            /// <summary>
+            /// [string] path to .model file if IsModel is true
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public string ModelPath { get; private set; } = (MainRenderer.Application_Directory + "\\Model\\cube.model" );
+            /// <summary>
+            /// [Model] Ignored by the json serializer, it holds the Model object containing the compiled model and its submeshes
+            /// </summary>
             [JsonIgnore]
             public Model? Model { get; private set; }
+            /// <summary>
+            /// [uint] the number of this specific shape VERY important, the program uses this number to know which of the many shapes to modify
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public uint ShapeNum { get; private set; }
+            /// <summary>
+            /// [uint] a needing to be reworked to IsReflective property that makes the program handle this shape having reflections in light
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public uint? Reflective { get; private set; } = 0;
+            /// <summary>
+            /// [string] path to the image of the diffusion map on the shape used in reflection  [not fully implemented]
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public string? DiffuseMapPath { get; private set; }
+            /// <summary>
+            /// [string[ path to the image of the specular map on the shape used in reflection [Not fully implemented]
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public string? SpecularMapPath { get; private set; }
+            /// <summary>
+            /// [uint] a flag to signal that shader compilation has been done for debugging
+            /// </summary>
             public uint ShaderCompilationCompleted { get; private set; }
+            /// <summary>
+            /// [Shader] the compiled shader itself 
+            /// </summary>
             public Shader? CompiledShader { get; private set; }
+            /// <summary>
+            /// [Texture] the shapes texture can be reused between shapes to save on compute power
+            /// </summary>
             public Texture? CompiledTexture { get; set; }
+            /// <summary>
+            /// [Texture] if diffuse map is provided this is the compiled version of it
+            /// </summary>
             private Texture? CompiledDiffuseMap { get; set; }
+            /// <summary>
+            /// [Texture] if specular map is provided this is the compiled version of it
+            /// </summary>
             private Texture? CompiledSpecularMap { get; set; }
+            /// <summary>
+            /// a Vector 3 (x,y,z) of the shapes rotation in 3d space
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public Vector3? RotationVector { get; set; }
+            /// <summary>
+            /// [float] the X component of the rotation vector used for the deserialization 
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float RotX { get; set; } = 0f;
+            /// <summary>
+            /// [float] the Y component of the rotation vector used for the deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float RotY { get; set; } = 0f;
+            /// <summary>
+            /// [float] the Z component of the rotation vector used for the deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float RotZ { get; set; } = 0f;
+            /// <summary>
+            /// [float] the size of the shape, it is equaly added to the stretch to make a vector3 used by the scalar matrix; defaults to 1
+            /// </summary>
             public float Size { get; set; } = 1f;
+            /// <summary>
+            /// a vector3 (x,y,z) of the shapes strech in 3d space
+            /// </summary>
             public Vector3 Stretch { get; set; } = new(1.0f, 1.0f, 1.0f);
+            /// <summary>
+            /// [float] the X component of the stretch vector used for deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float StrX { get; set; } = 1f;
+            /// <summary>
+            /// [float] the Y component of the stretch vector used for deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float StrY { get; set; } = 1f;
+            /// <summary>
+            /// [float] the Z component of the stretch vector used for deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float StrZ { get; set; } = 1f;
+            /// <summary>
+            /// a vector3 (x,y,z) of the shapes Shearing [Z is broken avoid if possible]
+            /// </summary>
             public Vector3 Shear { get; set; } = new(0f,0f,0f);
+            /// <summary>
+            /// [float] the X component of the shear vector used for deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float ShrX { get; set; } = 0f;
+            /// <summary>
+            /// [float] the Y component of the shear vector used for deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float ShrY { get; set; } = 0f;
+            /// <summary>
+            /// [float] the Z component of the shear vector used for deserialization
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float ShrZ { get; set; } = 0f;
+            /// <summary>
+            /// [float] the amount of bounce a shape will experience less then 1 is losing speed per bounce, greater then 1 is gaining speed when bouncing
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public float BoingFactor { get; set; } = 1f;
+            /// <summary>
+            /// [float] how shiny the shape is when reflective [Not fully implemented]
+            /// </summary>
             public float? Shininess { get; set; }
+            /// <summary>
+            /// [GL] BE CAREFUL MODIFYING THIS ITS THE OPENGL CONTEXT GENERATED BY THE MAIN THREAD AND HAS TO BE PASSED TO EACH OBJECT AT LOAD TIME SO THEY CAN COMPILE SHADERS AND TEXTURES ON THE GPU
+            /// </summary>
             public GL? Glcontext { get; set; }
+            /// <summary>
+            /// [Camera] Unless you have your own camera don't modify this since its injected from the main thread at load time
+            /// </summary>
             public Camera? Camera { get; set; }
+            /// <summary>
+            /// [uint] a uint flag that is used in the physics collison engine so that some shapes can and cannot have collison
+            /// </summary>
             public uint HasCollison { get; set; } = 0;
+            /// <summary>
+            /// [matrix4x4] the matrix that has been applied to the shape at last render time after scales, transforms, rotations have been applied
+            /// </summary>
             public Matrix4x4 ShapeMatrix { get; set; } = Matrix4x4.Identity;
+            /// <summary>
+            /// [int] a flag that signals to a shape that at render time some of its properties [position,rotation,scale] have been told to be modified and that it needs to apply them before the matrix math that dictates its state are run
+            /// </summary>
             public int AwaitingDispatchFromNamedPipe { get; set; } = 0;
+            /// <summary>
+            /// [boolean] a flag that lets the engine know this object handles gravity should also be used with the HasCollison
+            /// </summary>
             public Boolean IsEffectedByGravity { get; set; }
+            /// <summary>
+            /// a vector3 (x,y,z) that hold the Moment of the shape used mainly to debug the momentum mechanic
+            /// </summary>
             public Vector3 Momentum { get; set; } = new(0.0f, 0.0f, 0.0f);
+            /// <summary>
+            /// [float] the X component of the momentum vector
+            /// </summary>
             public float MomentumX { get; set; } = 0.0f;
+            /// <summary>
+            /// [float] the Y component of the momentum vector
+            /// </summary>
             public float MomentumY { get; set; } = 0.0f;
+            /// <summary>
+            /// [float] the Z component of the momentum vector
+            /// </summary>
             public float MomentumZ { get; set; } = 0.0f;
+            /// <summary>
+            /// [int] the int of the last time the shape successfully bounced off an object, used to make sure a bouncy doesn't happen within 10 frames of the last bounce so that it has time to get out of the collider of the other object without bouncing inside of it and never leaving
+            /// </summary>
             public int FrameTimeOfLastBoing { get; set; }
+            /// <summary>
+            /// [BoundingBox] the shapes AABB (axis-alligned bounding box) for handling it collison
+            /// </summary>
             public BoundingBox BoundingBox { get; set; }
+            /// <summary>
+            /// [float] the amount of gravity [still needs tweakes to get right]
+            /// </summary>
             public float Gravity { get; set; } = 0.1f;
+            /// <summary>
+            /// [string] used by the engine to tell a shape what exactly it needs to modify as told by the powershell server
+            /// </summary>
             public string? DISPATCH_TARGET_STRING { get; set; }
+            /// <summary>
+            /// [int] a flag to make the rending process spit out more verbos information to debug it
+            /// </summary>
             public int Debug { get; set ; } = 0;
 
             private Vector3 _Size_as_Vec3 {  get; set; }
@@ -128,18 +278,57 @@ namespace HoseRenderer
             private float _BB_MAX_X { get; set; }
             private float _BB_MAX_Y { get; set; }
             private float _BB_MAX_Z { get; set; }
-
+            /// <summary>
+            /// [double] the maximum speed the object is allowed to travel based on its mass and gravity to make sure it doesn't teleport out of existence by falling a large distance
+            /// </summary>
             public double TerminalVelocity { get; private set; }
+            /// <summary>
+            /// [float] the mass of the object which modifies its terminal velocity
+            /// </summary>
             public float Mass { get; private set; } = 1f;
+            /// <summary>
+            /// [uint] if the shape current momentum is low and it bounces onto the floor it will clamp so that its not just stuck forever going up and down
+            /// </summary>
             public uint ClampedToFloor { get; set; } = 0;
+            /// <summary>
+            /// [uint] a flag to state that this object is directly controlled by a player or dev without it coming from the powershell server
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public uint Player_moveable { get; set; }
+            /// <summary>
+            /// [uint] states which player is controlling it [so far only there are 1,2]
+            /// </summary>
             [JsonInclude]
             [JsonRequired]
             public uint Player_scheme { get; set; }
-
+            /// <summary>
+            /// [float] the max distance an object will be rendered to save on computer resources
+            /// </summary>
             public float Culling_Distance { get; set; } = 200f;
+            /// <summary>
+            /// The Base contructor of a shape this is the one that should be used over the parameterless one
+            /// </summary>
+            /// <param name="shapename"></param>
+            /// <param name="position"></param>
+            /// <param name="shapenum"></param>
+            /// <param name="reflective"></param>
+            /// <param name="glowy"></param>
+            /// <param name="shaderpath"></param>
+            /// <param name="fragmentpath"></param>
+            /// <param name="texturepath"></param>
+            /// <param name="rotationvector"></param>
+            /// <param name="size"></param>
+            /// <param name="stretch"></param>
+            /// <param name="shear"></param>
+            /// <param name="Collison"></param>
+            /// <param name="momentum"></param>
+            /// <param name="boingfactor"></param>
+            /// <param name="iseffectedbygravity"></param>
+            /// <param name="player_control"></param>
+            /// <param name="player_num"></param>
+            /// <param name="ismodel"></param>
+            /// <param name="modelpath"></param>
             public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collison,Vector3 momentum,float boingfactor,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
             {
                 Console.WriteLine("Creating new instance of Shape object");
@@ -202,7 +391,14 @@ namespace HoseRenderer
                 Player_moveable = player_control;
                 Player_scheme = player_num;
             }
+            /// <summary>
+            /// DO NOT USE THIS IS JUST HERE FOR THE JSON SERIALIZATION PROCESS WHICH REQUIRES A PARAMETERLESS CTOR TO CONVERT THE RAW BYTES BACK INTO AN OBJECT
+            /// </summary>
             public Shape() { }
+            /// <summary>
+            /// the method that needs to be called after giving the object the GL context this tells openGL to compile the shader
+            /// </summary>
+            /// <exception cref="InvalidOperationException"></exception>
             public void CompileShader()
             {
                 Console.WriteLine($"running shader compilation on shape num {this.ShapeNum}");
@@ -214,6 +410,10 @@ namespace HoseRenderer
                 this.ShaderCompilationCompleted = 1;
                 Console.WriteLine($"Shader Compilation Complete on shape num {this.ShapeNum}");
             }
+            /// <summary>
+            /// Compiles the specifed texture using the shapes OpenGL context
+            /// </summary>
+            /// <exception cref="InvalidOperationException"></exception>
             public void CompileTexture()
             {
                 if (this.TexturePath == null || this.TexturePath == "")
@@ -235,6 +435,9 @@ namespace HoseRenderer
                     }
                 }
             }
+            /// <summary>
+            /// [not fully implemented] will compile the shapes diffusing and specular maps
+            /// </summary>
             public void CompileDiffusion()
             {
                 if (this.Glcontext != null) {
@@ -260,6 +463,9 @@ namespace HoseRenderer
                     }
                 }
             }
+            /// <summary>
+            /// if the shape is a model this is compile out the models meshes using the OpenGL context [WARNING MODELS ARE CURRENTLY BUGGY AND DO NOT ASSEMBLE CORRECTLY]
+            /// </summary>
             public void CompileModelMesh()
             {
                 if (this.Glcontext != null) {
@@ -271,9 +477,10 @@ namespace HoseRenderer
                 }
             }
             //TODO MAKE THE MATH THAT HANDLES OBJECTS IN RELATION TO EACHOTHER USING A GLOBAL LIGHT ARRAY SO THAT YOU CAN DO THE MATRIX MATH AS TO HOW TO MAKE THING BRIGHT
-            //<summary>
-            //Contains all the things that need to happen to the shape to get it to rendering on the screen.
-            //</summary>
+            /// <summary>
+            /// the important method, this handles everything a shape needs to showup on the screen. From receiving a message from powershell to modify a property with the DIRECTIVES, to the matrix math that needs to be applied to the identity matrix to position,rotate, and scale the shape
+            /// </summary>
+            /// <exception cref="AnomalousObjectException"></exception>
             public void Render()
             {
                 int Print_debug_msg = 0;
@@ -535,6 +742,9 @@ namespace HoseRenderer
                     this.AwaitingDispatchFromNamedPipe = 0;
                 }
             }
+            /// <summary>
+            /// a method to make sure all Vector3 are updated to keep a seamless state if somewhere else needs to use this (like .render() that needs it for matrix math) and build/update the BB with the shape state
+            /// </summary>
             public void GlueShape()
             {
                 this.Position = new Vector3(this.PosX,this.PosY,this.PosZ);
@@ -565,6 +775,11 @@ namespace HoseRenderer
                 this._Size_as_Vec3 = Vector3.One * Size;
                 this.BoundingBox = new(new Vector3(_BB_MIN_X, _BB_MIN_Y, _BB_MIN_Z), new Vector3(_BB_MAX_X, _BB_MAX_Y, _BB_MAX_Z));
             }
+            /// <summary>
+            /// Modifies the shapes position based on player input
+            /// </summary>
+            /// <param name="speed"></param>
+            /// <param name="axis"></param>
             public void UserLiveControl(float speed, string axis)
             {
                 switch (axis)
@@ -581,34 +796,74 @@ namespace HoseRenderer
                 }
             }
         }
+        /// <summary>
+        /// the AABB class is the bounding box of shapes
+        /// </summary>
         public class BoundingBox
         {
+            /// <summary>
+            /// [Vector3] the minimum (starting point of the BB)
+            /// </summary>
             public Vector3 Min { get; set; }
+            /// <summary>
+            /// [Vector3] the maximum (ending point of the BB)
+            /// </summary>
             public Vector3 Max { get; set; }
+            /// <summary>
+            /// Builds the AABB bounding box
+            /// </summary>
+            /// <param name="min"></param>
+            /// <param name="max"></param>
             public BoundingBox(Vector3 min, Vector3 max)
             {
                 Min = min; Max = max;
             }
+            /// <summary>
+            /// Each frame the BB gets updated incase the shape moves by updating the min-max in accorance to stretch
+            /// </summary>
+            /// <param name="Position"></param>
+            /// <param name="Size"></param>
+            /// <param name="stretch"></param>
             public void Update(Vector3 Position, float Size, Vector3 stretch)
             {
                 Vector3 adjustedscale = new(Size + stretch.X, Size + stretch.Y, Size + stretch.Z);
                 Min = Position - adjustedscale / 2;
                 Max = Position + adjustedscale / 2;
             }
+            /// <summary>
+            /// Detects if a shape collides with another shape in any axis
+            /// </summary>
+            /// <param name="Other"></param>
+            /// <returns></returns>
             public Boolean Intersects(BoundingBox Other)
             {
                 return (Min.X <= Other.Max.X && Max.X >= Other.Min.X) && 
                        (Min.Y <= Other.Max.Y && Max.Y >= Other.Min.Y) && 
                        (Min.Z <= Other.Max.Z && Max.Z >= Other.Min.Z);
             }
+            /// <summary>
+            /// Detects in that intersection was on the X axis so it can bounce off it that way
+            /// </summary>
+            /// <param name="Other"></param>
+            /// <returns></returns>
             public Boolean IntersectsX(BoundingBox Other)
             {
                 return Min.X <= Other.Min.X && Max.X >= Other.Max.X;
             }
+            /// <summary>
+            /// Detects in that intersection was on the Y axis so it can bounce off it that way
+            /// </summary>
+            /// <param name="Other"></param>
+            /// <returns></returns>
             public Boolean IntersectsY(BoundingBox Other) 
             {
                 return Min.Y <= Other.Min.Y && Max.Y >= Other.Max.Y;
             }
+            /// <summary>
+            /// Detects in that intersection was on the Y axis so it can bounce off it that way
+            /// </summary>
+            /// <param name="Other"></param>
+            /// <returns></returns>
             public Boolean IntersectsZ(BoundingBox Other) { 
                 return Min.Z <= Other.Min.Z && Max.Z >= Other.Max.Z;
             }

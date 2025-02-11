@@ -7,16 +7,28 @@ namespace HoseRenderer
 {
     namespace NamedPipes
     {
+        /// <summary>
+        /// A built out class for named pipes that handles more of the backgrounded needed for both sides
+        /// </summary>
         public class PowerGLPipe
         {
             private Stream ioStream;
             private UnicodeEncoding encoding;
-
+            /// <summary>
+            /// Creaes 
+            /// </summary>
+            /// <param name="ioStream"></param>
             public PowerGLPipe (Stream ioStream)
             {
                 this.ioStream = ioStream;
                 encoding = new UnicodeEncoding();
             }
+            /// <summary>
+            /// Reads the bytes in the pipe
+            /// </summary>
+            /// <returns>
+            /// The unicode string of the bytes in the pipe
+            /// </returns>
             public string ReadString()
             {
                 int len;// = 256;
@@ -31,6 +43,13 @@ namespace HoseRenderer
 
                 return encoding.GetString(inBuffer);
             }
+            /// <summary>
+            /// Writes the string to the pipe
+            /// </summary>
+            /// <param name="outstr"></param>
+            /// <returns>
+            /// The length of written bytes + 2 for padding
+            /// </returns>
             public int WriteString(string outstr)
             {
                 //MS Why in your own docs did you forget Unicode is 2 bytes instead of 1 per character
@@ -46,18 +65,41 @@ namespace HoseRenderer
 
                 return outbuffer.Length + 2;
             }
+            /// <summary>
+            /// A wrapper for the IOstream .Close without exposing the io stream itself
+            /// </summary>
             public void Detach()
             {
                 this.ioStream.Close();
             }
 
         }
+        /// <summary>
+        /// The Powershell Side launches the server that the rendering engine connects to, Is bound to local hose only :)
+        /// </summary>
         public class NamedPipeServer
         {
+            /// <summary>
+            /// The Named pipe this enging expects "PowerGL"
+            /// </summary>
             public string PipeName { get; private set; }
+            /// <summary>
+            /// The Directionality of the Pipe, InOut is recommended as thats what the engine expects
+            /// </summary>
             public PipeDirection Direction { get; private set; }
+            /// <summary>
+            /// The underlying Pipe from system.io.pipes as this is the server host
+            /// </summary>
             public NamedPipeServerStream Pipe { get; private set; }
+            /// <summary>
+            /// The underlying IO stream and IO operations on the pipe
+            /// </summary>
             public PowerGLPipe StreamString { get; private set; }
+            /// <summary>
+            /// Creates a new NamedPipe server for use to talk with the rendering engine
+            /// </summary>
+            /// <param name="pipeName"></param>
+            /// <param name="direction"></param>
             public NamedPipeServer(string pipeName, PipeDirection direction)
             {
                 PipeName = pipeName;
@@ -66,6 +108,11 @@ namespace HoseRenderer
                 Pipe.WaitForConnection();
                 StreamString = new PowerGLPipe(Pipe);
             }
+            /// <summary>
+            /// A wrapper for the underlying IO stream to write Directives (operations) to the Rendering engine during the .render() call
+            /// </summary>
+            /// <param name="Message"></param>
+            /// <returns></returns>
             public int WriteDirective(string Message)
             {
                 return this.StreamString.WriteString(Message);
