@@ -1,4 +1,4 @@
-import-module $psscriptroot\PowerGL.psm1
+Import-Module $psscriptroot\PowerGL.psm1
 $s = [GC]::GetTotalAllocatedBytes($true)
 $shapecount = 0
 $Shape_array = @()
@@ -41,15 +41,15 @@ $pipe = initialize-PowerGL -phase 3
 $pipe_string = "DEBUG:PIPETALKED"
 $pipe_len = $pipe.WriteDirective($pipe_string)
 Write-Output "STRLEN:$($pipe_string.Length)::PIPLEN:$($pipe_len)"
-start-sleep -Seconds 10
+Start-Sleep -Seconds 10
 $pipe.WriteDirective((Move-PowerGLShape -scale 1 -shapenum 0 -property "SCALE"))
 Start-Sleep -Milliseconds 100
-for($i=0;$i -lt 360;$i++ ){
-    try{
+for ($i = 0; $i -lt 360; $i++ ) {
+    try {
         $pipe.WriteDirective((Move-PowerGLShape -X 0 -Z 0 -Y $i -shapenum 9 -property "ROTATE"))
-        start-sleep -Milliseconds 100
+        Start-Sleep -Milliseconds 100
     }
-    catch{
+    catch {
         exit 0
     }
 }
