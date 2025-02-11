@@ -120,6 +120,7 @@
     <Folder Include="CLibs\" />
     <Folder Include="IPCFiles\" />
     <Folder Include="Logs\" />
+    <Folder Include="GitHubAssets\" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
