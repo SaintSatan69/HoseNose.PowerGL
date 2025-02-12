@@ -10,7 +10,7 @@ PowerGL is VERY alpha, so very buggy and prone to quirks. Im a sysadmin by day s
 ***
 # About
 ### What is PowerGL
-PowerGL is a PowerShell module/C# program that allows someone to use powershell to leverage technology like OpenGL to render 3D enviroments with powershell acting as a controller.
+PowerGL is a PowerShell module/C# program that allows someone to use powershell to leverage technology like OpenGL to render 3D enviroments with powershell acting as a controller. It is 10% pure powershell and 90% C#, this is because powershell doesn't work with the Silk.Net librarys to make the window. Powershell is used as the control plane of the rendering engine (C# side) so that the engine itself can remain slim to do what it does better.
 ### Why?
 why not? I see and use powershell for practicle applications (new users, Departing users) in the day job, and one day I wondered what Non-practicle use for powershell I could make and stumbled on someone who did a little similar but at that point it was several years old PowerShell OpenGL.
 
