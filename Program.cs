@@ -69,6 +69,11 @@ namespace HoseRenderer
         private static float _player_speed =  0.01f;
 
         /// <summary>
+        /// A Global Logger for the main engine can be used by other classes if the log pertains to the functionality of the main engine (Do not have seperate threads touch this)
+        /// </summary>
+        public static readonly Logger EngineLogger = new("RenderEngine",null,Environment.CurrentManagedThreadId);
+
+        /// <summary>
         /// Used By Other Objects the Static Directory of the powershell 7-preview Modules folder so that all objects that need to reference files inside the engine know where it is on the filesystem
         /// </summary>
         public static readonly string Application_Directory = @"C:\Program Files\PowerShell\7-preview\Modules\PowerGL";
@@ -149,6 +154,11 @@ namespace HoseRenderer
         /// <param name="args"></param>
         public static void Main(string[] args)
         {
+            string argstring = "";
+            for (int a = 0; a < args.Length; a++) { 
+                argstring += ("-" + args[a]);
+            }
+            EngineLogger.Log($"Engine Initalization Started args {argstring}");
             if (args.Length > 0) {
                 if (args[0] == "pipe_enable") {
                     FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
@@ -233,17 +243,16 @@ namespace HoseRenderer
             window.Run();
             window.Dispose();
         }
-        /// <summary>
-        /// Calls the ReadShapeIPC and either retrives the shapes[] stored in the users temp folder and stores it into the engines Shapes variable or does nothing and allows the engine to go to default state programmed into the engine itself
-        /// </summary>
-        public static void LoadObjects() {
+        private static void LoadObjects() {
             try
             {
                 Shapes = SharedFileIPC.ReadShapeIPC();
                 Console.WriteLine($"SUCCESS MAYBE OBJECT [0] is {Shapes[0].ShapeName}");
+                EngineLogger.Log($"Loaded Objects successfully shape count is {Shapes.Length}");
             }
-            catch
+            catch(Exception ex)
             {
+                EngineLogger.Log($"Load Objects Failed Exception:{ex.Message}");
                 Console.WriteLine("IPC never initialized loading default scene");
             }
         }

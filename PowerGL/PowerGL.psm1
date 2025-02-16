@@ -27,9 +27,11 @@ $Script:ProgramDirectory = $PSScriptRoot
 
 [string]$script:IPC_FOLDER = ($USR_PROFILE + "\IPCFiles")
 
+[HoseRenderer.Logger]$Script:ModuleLogger = [HoseRenderer.Logger]::new("PowerShell", "C:\Users\$($env:USERNAME)\appdata\local\temp\powergl\logs")
 foreach ($file in (Get-ChildItem $PSScriptRoot\public\*.ps1)) {
     . $file.FullName
 }
+New-PowerGLLog -message "PowerShell Module Imported"
 $OnRemoveScript = {
     $hose = Get-Process | Where-Object { $_.Name -eq "HoseRenderer.exe" }
     while ($null -ne (Get-Process -Id $hose.Id)) {

@@ -61,7 +61,7 @@ namespace HoseRenderer
             /// </summary>
             [JsonInclude]
             [JsonRequired]
-            public string FragementPath { get; set; }
+            public string FragmentPath { get; set; }
             /// <summary>
             /// [uint] a flag to tell the program that the shape emits light [NOT IMPLEMENTED FULLY]
             /// </summary>
@@ -352,16 +352,16 @@ namespace HoseRenderer
                 if (fragmentpath == null)
                 {
                     if (reflective == 0) {
-                        FragementPath = ".\\Shaders\\shader.frag";
+                        FragmentPath = ".\\Shaders\\shader.frag";
                     }
                     else
                     {
-                        FragementPath = ".\\Shaders\\lighting.frag";
+                        FragmentPath = ".\\Shaders\\lighting.frag";
                     }
                 }
                 else
                 {
-                    FragementPath = fragmentpath;
+                    FragmentPath = fragmentpath;
                 }
                 PosX = position.X; 
                 PosY = position.Y; 
@@ -406,9 +406,18 @@ namespace HoseRenderer
                 {
                     throw new InvalidOperationException("Cannot compile shaders when there is no OPENGL context for which to bind to.");
                 }
-                this.CompiledShader = new Shader(this.Glcontext, this.ShaderVertPath, this.FragementPath);
-                this.ShaderCompilationCompleted = 1;
-                Console.WriteLine($"Shader Compilation Complete on shape num {this.ShapeNum}");
+                try
+                {
+                    this.CompiledShader = new Shader(this.Glcontext, this.ShaderVertPath, this.FragmentPath);
+                    this.ShaderCompilationCompleted = 1;
+                    Console.WriteLine($"Shader Compilation Complete on shape num {this.ShapeNum}");
+                    MainRenderer.EngineLogger.Log($"Shader Compilation on Shape {this.ShapeNum}, VertexShader={this.ShaderVertPath}, FragShader={this.FragmentPath} Completed Successfully");
+                }
+                catch (Exception ex) 
+                {
+                    MainRenderer.EngineLogger.Log($"Shader Compilation on Shape {this.ShapeNum}, VertexShader={this.ShaderVertPath}, FragShader={this.FragmentPath} FAILED Exception:{ex.Message}");
+                    throw new InvalidOperationException($"See Error Log at ${MainRenderer.EngineLogger.Log_Directory}");
+                }
             }
             /// <summary>
             /// Compiles the specifed texture using the shapes OpenGL context
@@ -432,6 +441,7 @@ namespace HoseRenderer
                     {
                         this.CompiledTexture = new Texture(this.Glcontext, this.TexturePath);
                         Console.WriteLine($"Texture Compilation Complete on shape num {this.ShapeNum}");
+                        MainRenderer.EngineLogger.Log($"Texture Compilation of texture {this.TexturePath} Successful");
                     }
                 }
             }
@@ -470,6 +480,7 @@ namespace HoseRenderer
             {
                 if (this.Glcontext != null) {
                     this.Model = new Model(this.Glcontext, this.ModelPath);
+                    MainRenderer.EngineLogger.Log($"Model {this.ModelPath} Has Completed Building");
                 }
                 else
                 {
@@ -732,6 +743,7 @@ namespace HoseRenderer
 
 
                 if (GL == null) {
+                    MainRenderer.EngineLogger.Log("CRITICAL FAILURE OF ENGINE GL IS NULL AT RENDER CALL WHICH CANNOT HAPPEN");
                     throw new AnomalousObjectException("You done royally fucked up to get here, you've managed to get past the check of having an OPENGL context on compiling and rending, we obviously can't draw the triangles if theres no place to put the fucking things");
                 } else {
                     if (!this.IsModel) {

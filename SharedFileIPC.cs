@@ -90,9 +90,11 @@ namespace HoseRenderer
         /// </returns>
         public static PowerGLPipe AttachToOrchastratorNamedPipe()
         {
+            MainRenderer.EngineLogger.Log("Establishing connection to PowerGL Pipe");
             var pipeClient = new NamedPipeClientStream(".","PowerGL",PipeDirection.InOut,PipeOptions.None,TokenImpersonationLevel.Impersonation);
             Console.WriteLine("Attempting to Connect to the powershell process for object movements");
             pipeClient.Connect();
+            MainRenderer.EngineLogger.Log("PowerGL Pipe connected");
             return new PowerGLPipe(pipeClient);
         }
         /// <summary>

@@ -11,7 +11,7 @@ namespace HoseRenderer
         /// coverts the [float] degress into it radian amount
         /// </summary>
         /// <param name="degrees"></param>
-        /// <returns></returns>
+        /// <returns>a float of the radian value of the degrees called</returns>
         public static float DegreesToRadians(float degrees) { 
             return (float) ((Math.PI / 180f) * degrees);
         }
