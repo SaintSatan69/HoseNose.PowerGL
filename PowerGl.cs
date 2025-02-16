@@ -860,7 +860,7 @@ namespace HoseRenderer
             /// <returns></returns>
             public Boolean IntersectsX(BoundingBox Other)
             {
-                return Min.X <= Other.Min.X && Max.X >= Other.Max.X;
+                return Min.X <= Other.Max.X && Max.X >= Other.Min.X;
             }
             /// <summary>
             /// Detects in that intersection was on the Y axis so it can bounce off it that way
@@ -869,15 +869,15 @@ namespace HoseRenderer
             /// <returns></returns>
             public Boolean IntersectsY(BoundingBox Other) 
             {
-                return Min.Y <= Other.Min.Y && Max.Y >= Other.Max.Y;
+                return Min.Y <= Other.Max.Y && Max.Y >= Other.Min.Y;
             }
             /// <summary>
-            /// Detects in that intersection was on the Y axis so it can bounce off it that way
+            /// Detects in that intersection was on the Z axis so it can bounce off it that way
             /// </summary>
             /// <param name="Other"></param>
             /// <returns></returns>
             public Boolean IntersectsZ(BoundingBox Other) { 
-                return Min.Z <= Other.Min.Z && Max.Z >= Other.Max.Z;
+                return Min.Z <= Other.Max.Z && Max.Z >= Other.Min.Z;
             }
         }
     }

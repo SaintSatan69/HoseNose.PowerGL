@@ -734,7 +734,7 @@ namespace HoseRenderer
                     {
                         //Console.WriteLine($"MRT1:{Matrises[i].Translation}::MRT2{Matrises[j].Translation}");
                         //attempt 3 works, had a little help from copilot since i wasn't finding any sort of ideas on google it uses AABB (axis-alligned Bounding Boxes)
-                        if (Shapes[i].BoundingBox.Intersects(Shapes[j].BoundingBox))
+                        if (Shapes[i].BoundingBox.Intersects(Shapes[j].BoundingBox) && _Frame_counter > 10)
                         {
                             Debugger.Log(1,"",$"{_Frame_counter}::Shape I:{Shapes[i].ShapeNum} collides with Shape:{Shapes[j].ShapeNum} {Environment.NewLine}");
                             if (Shapes[i].BoundingBox.IntersectsX(Shapes[j].BoundingBox)) 
@@ -774,7 +774,7 @@ namespace HoseRenderer
                 }
             }
             var _frame_count_last_boing = Shape.FrameTimeOfLastBoing;
-            if (_Frame_counter >= _frame_count_last_boing + 5)
+            if (_Frame_counter >= _frame_count_last_boing + 5 || _Frame_counter == _frame_count_last_boing)
             {
                 if (Shape.Player_moveable != 1) {
                     var _Old_momentum = Shape.Momentum;
