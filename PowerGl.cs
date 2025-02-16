@@ -219,9 +219,9 @@ namespace HoseRenderer
             /// </summary>
             public Camera? Camera { get; set; }
             /// <summary>
-            /// [uint] a uint flag that is used in the physics collison engine so that some shapes can and cannot have collison
+            /// [uint] a uint flag that is used in the physics collision engine so that some shapes can and cannot have collision
             /// </summary>
-            public uint HasCollison { get; set; } = 0;
+            public uint HasCollision { get; set; } = 0;
             /// <summary>
             /// [matrix4x4] the matrix that has been applied to the shape at last render time after scales, transforms, rotations have been applied
             /// </summary>
@@ -231,7 +231,7 @@ namespace HoseRenderer
             /// </summary>
             public int AwaitingDispatchFromNamedPipe { get; set; } = 0;
             /// <summary>
-            /// [boolean] a flag that lets the engine know this object handles gravity should also be used with the HasCollison
+            /// [boolean] a flag that lets the engine know this object handles gravity should also be used with the HasCollision
             /// </summary>
             public Boolean IsEffectedByGravity { get; set; }
             /// <summary>
@@ -255,7 +255,7 @@ namespace HoseRenderer
             /// </summary>
             public int FrameTimeOfLastBoing { get; set; }
             /// <summary>
-            /// [BoundingBox] the shapes AABB (axis-alligned bounding box) for handling it collison
+            /// [BoundingBox] the shapes AABB (axis-alligned bounding box) for handling it collision
             /// </summary>
             public BoundingBox BoundingBox { get; set; }
             /// <summary>
@@ -321,7 +321,7 @@ namespace HoseRenderer
             /// <param name="size"></param>
             /// <param name="stretch"></param>
             /// <param name="shear"></param>
-            /// <param name="Collison"></param>
+            /// <param name="Collision"></param>
             /// <param name="momentum"></param>
             /// <param name="boingfactor"></param>
             /// <param name="iseffectedbygravity"></param>
@@ -329,14 +329,14 @@ namespace HoseRenderer
             /// <param name="player_num"></param>
             /// <param name="ismodel"></param>
             /// <param name="modelpath"></param>
-            public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collison,Vector3 momentum,float boingfactor,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
+            public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collision,Vector3 momentum,float boingfactor,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
             {
                 Console.WriteLine("Creating new instance of Shape object");
                 ShapeName = shapename;
                 Position = position;
                 ShapeNum = shapenum;
                 Size = size;
-                HasCollison = Collison;
+                HasCollision = Collision;
                 Reflective = reflective;
                 LightEmitting = glowy;
                 RotationVector = rotationvector;

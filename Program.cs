@@ -730,7 +730,7 @@ namespace HoseRenderer
             for (int i = 0; i < Shapes.Length; i++) {
                 for (int j = 0; j < Shapes.Length; j++)
                 {
-                    if (i != j && Shapes[i].HasCollison == 1 && Shapes[j].HasCollison == 1)
+                    if (i != j && Shapes[i].HasCollision == 1 && Shapes[j].HasCollision == 1)
                     {
                         //Console.WriteLine($"MRT1:{Matrises[i].Translation}::MRT2{Matrises[j].Translation}");
                         //attempt 3 works, had a little help from copilot since i wasn't finding any sort of ideas on google it uses AABB (axis-alligned Bounding Boxes)
