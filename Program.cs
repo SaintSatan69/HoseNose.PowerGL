@@ -2,13 +2,15 @@
 using Silk.NET.Windowing;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
-//using Silk.NET.OpenGL.Extensions.ImGui;
+using Silk.NET.OpenGL.Extensions.ImGui;
 using System.Numerics;
 using HoseRenderer.PowerGl;
 using HoseRenderer.NamedPipes;
 using HoseRenderer.ExtraUtils;
 using System.Diagnostics;
 using System.Drawing;
+using ImGuiNET;
+using System.Runtime.CompilerServices;
 
 
 
@@ -25,6 +27,7 @@ namespace HoseRenderer
 
         private static GL Gl;
         private static IKeyboard primaryKeyboard;
+        private static IMouse mouse;
 
         private static VertexArrayObject<float, uint> VaoCube;
         private static BufferObject<float> Vbo;
@@ -92,9 +95,17 @@ namespace HoseRenderer
         private static Thread[] ThreadPoolRenderer;
 
         //GUI things
-        //private static ImGuiController guiController;
+        private static ImGuiController guiController;
         private static int _Gui_Frame_state = 0;
         private static int _Last_frametime_GUI_change = 0;
+        private static bool HIDE_SHAPES_FOR_GUI = false;
+        /// <summary>
+        /// A Signal handler to tell objects to not render when the GUI is Active since the GUI was being rendered correctly but because of the sky box cloud it was hidden
+        /// </summary>
+        public static bool IsGUICalled { get => HIDE_SHAPES_FOR_GUI;  }
+        private static string CMD_PROC = "";
+        private static uint PROC_LEN = 255;
+        private static int _char_frametime = 0;
 
 #pragma warning restore CS8618 
         private static readonly float[] Vertices =
@@ -202,7 +213,7 @@ namespace HoseRenderer
             options.Size = new Vector2D<int>(1920, 1080);
             options.Title = "HoseNose.PowerGL";
             options.Position = new Vector2D<int>(0,30);
-            
+            options.VSync = false;
             Console.WriteLine("HoseNose.PowerGL has been loaded");
             Console.WriteLine($"{options.API.API.ToString()}{options.Size}");
             var Platforms = Window.Platforms.Count;
@@ -211,13 +222,12 @@ namespace HoseRenderer
             //why must techonology not like powershell :( (we are cheating by having powershell just do the control of shapes engine, the shape properties and when this program is launched leaving
             //this to do the rendering calls to OpenGL through Silk.Net)
             Console.WriteLine($"{window.API.API} {window.WindowState}");
-            
+
             //SharedFileIPC.InitalizeFileIPC();
             //this is for debugging the rendering engine not showing my shapes :( (Fixed that still leaving all this here for main engine debugging)
             //Shape[] shape = new Shape[2];
             //shape[0] = new Shape("Cube", new Vector3(2f, 3f, 3f), 1, 0, 0, null, null, null, null, null, ".\\randompictures\\silk.png", Vector3.Zero,1.0f, new Vector3(0.0f,0.0f,0.0f));
             //shape[1] = new Shape("Cube", new Vector3(1f, 1f, 0f), 2, 0, 0, null, null, null, null, null, ".\\randompictures\\PDQ_wallpaper.png", new Vector3(0.0f,0.0f,0.0f),2.0f, new Vector3(0.5f,0.0f,0.0f));
-
             if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE") {
                 //VERY LIKELY CHANCE WE GET A RACE CONDITION BECAUSE BOTH PROGRAMS ARE SINGLE THREADED FOR ALL THEIR LOGIC BESIDES IN LIBRARIES AND OTHER THINGS SO WE CAN JUST SLEEP THE APPLICATION ONCE
                 //IT STARTS SO POWERSHELL CAN CONSTRUCT THE NAMED PIPE AND AWAIT THE RENDERER TO CONNECT (THIS WORKS CORRECTLY NAMED PIPES HOWER ARE SYNCHORNOUS SO THE NAMED PIPE WILL DEADLOCK THE 
@@ -228,6 +238,10 @@ namespace HoseRenderer
                     Thread.CurrentThread.IsBackground = true;
                     while (true)
                     {
+                        while (IsGUICalled)
+                        {
+                            Thread.Sleep(10);
+                        }
                         _Pipe_THREAD_DATA = Pipe.ReadString();
                     }
                 });
@@ -240,7 +254,15 @@ namespace HoseRenderer
             window.FramebufferResize += OnFramebufferResize;
             window.Update += OnUpdate;
             window.Closing += OnClose;
-            window.Run();
+            try
+            {
+                window.Run();
+            }
+            catch (Exception ex) 
+            {
+                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}, IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
+                throw new InvalidOperationException("ENGINE HAS CRASHED LOOK AT THE LOG FILE");
+            }
             window.Dispose();
         }
         private static void LoadObjects() {
@@ -270,11 +292,15 @@ namespace HoseRenderer
                 input.Mice[i].MouseMove += OnMouseMove;
                 input.Mice[i].Scroll += OnMouseWheel;
             }
+            if (input.Mice.Count == 1)
+            {
+                mouse = input.Mice[0];
+            }
+            MainRenderer.EngineLogger.Log($"Mouse and keyboards enumerated there are {input.Keyboards.Count} keyboards and {input.Mice.Count} mice, Keyboard1 is {input.Keyboards[0].Name} and mouse1 is {input.Mice[0].Name}");
             Gl = GL.GetApi(window);
             LoadObjects();
             Console.WriteLine($"Shapes array from LOAD_OBJECTS:{Shapes.Length}");
-            //guiController = new(Gl,window,input);
-
+            guiController = new(Gl,window,input);
             Ebo = new BufferObject<uint>(Gl, Indices, BufferTargetARB.ElementArrayBuffer);
             Vbo = new BufferObject<float>(Gl, Vertices, BufferTargetARB.ArrayBuffer);
             VaoCube = new VertexArrayObject<float, uint>(Gl, Vbo, Ebo);
@@ -427,8 +453,16 @@ namespace HoseRenderer
 
         private static unsafe void OnRender(double dt)
         {
+            guiController.Update((float)dt);
             _Frame_counter++;
             Gl.Enable(EnableCap.DepthTest);
+            if (IsGUICalled) {
+                Gl.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
+            }
+            else
+            {
+                Gl.ClearColor(Color.FromArgb(255, (int)(.01f * 255), (int)(.01f * 255), (int)(.01f * 255)));
+            }
             Gl.Clear((uint) (ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
             VaoCube.Bind();
             if (FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS" || Shapes.Length == 0)
@@ -441,27 +475,34 @@ namespace HoseRenderer
             }
             if (FLAGS[3] == "PHYSICS")
             {
-                
-                ComputeWhetherOrNotThereIsAShapeInsideAShapeThatSupportsCollions(Shapes);
-                for (int i = 0; i < Shapes.Length; i++)
-                {
-                    if (Shapes[i].IsEffectedByGravity) {
-                        ApplyGravity(Shapes[i],dt);
+                if (!IsGUICalled) {
+                    ComputeWhetherOrNotThereIsAShapeInsideAShapeThatSupportsCollions(Shapes);
+                    for (int i = 0; i < Shapes.Length; i++)
+                    {
+                        if (Shapes[i].IsEffectedByGravity) {
+                            ApplyGravity(Shapes[i], dt);
+                        }
                     }
                 }
             }
             //guiController.Update((float)dt);
-            //Debugger.Log(4,"INTERNAL_GUI",$"GUI_TYPE{_Gui_Frame_state}");
-
-            //ImGuiNET.ImGui.ShowDemoWindow();
-            //BuildGUI();
-            //if (_Gui_Frame_state == 1) {
-            //    try
-            //    {
-            //        guiController.Render();
-            //    }
-            //    catch { }
-            //}
+            if (_Last_frametime_GUI_change == _Frame_counter) {
+                Debugger.Log(4, "INTERNAL_GUI", $"GUI_TYPE{_Gui_Frame_state} {Environment.NewLine}");
+            }
+            if (_Gui_Frame_state == 1)
+            {
+                mouse.Cursor.CursorMode = CursorMode.Normal;
+                try
+                {
+                    BuildPowerGLGUI();
+                    guiController.Render();
+                }
+                catch { }
+            }
+            else
+            {
+                mouse.Cursor.CursorMode = CursorMode.Raw;
+            }
 
 
 
@@ -646,19 +687,24 @@ namespace HoseRenderer
             {
                 Camera.Position += Vector3.Normalize(Vector3.Cross(Camera.Front, Vector3.UnitX)) * moveSpeed;
             }
-            //if (primaryKeyboard.IsKeyPressed(Key.Tab))
-            //{
-            //    if (_Frame_counter >= _Last_frametime_GUI_change + 10) {
-            //        if (_Gui_Frame_state < 2) {
-            //            _Gui_Frame_state++;
-            //            _Last_frametime_GUI_change = _Frame_counter;
-            //        }
-            //        else
-            //        {
-            //            _Gui_Frame_state = 0;
-            //        }
-            //    }
-            //}
+            if (primaryKeyboard.IsKeyPressed(Key.GraveAccent))
+            {
+                if (_Frame_counter >= _Last_frametime_GUI_change + 60)
+                {
+                    if (_Gui_Frame_state < 1)
+                    {
+                        HIDE_SHAPES_FOR_GUI = true;
+                        _Gui_Frame_state++;
+                        _Last_frametime_GUI_change = _Frame_counter;
+                    }
+                    else
+                    {
+                        HIDE_SHAPES_FOR_GUI = false;
+                        _Gui_Frame_state = 0;
+                        _Last_frametime_GUI_change = _Frame_counter;
+                    }
+                }
+            }
             if (primaryKeyboard.IsKeyPressed(Key.T))
             {
                 Shapes[_player_1_controllerObject].PosX += _player_speed;
@@ -686,6 +732,7 @@ namespace HoseRenderer
         }
         private static unsafe void OnMouseMove(IMouse mouse, Vector2 postition)
         {
+            
             var lookSensitivity = 0.1f;
             if (LastMousePosition == default) { LastMousePosition = postition; }
             else
@@ -698,7 +745,9 @@ namespace HoseRenderer
         }
         private static unsafe void OnMouseWheel(IMouse mouse, ScrollWheel scrollWheel)
         {
-            Camera.ModifyZoom(scrollWheel.Y);
+            if (!IsGUICalled) {
+                Camera.ModifyZoom(scrollWheel.Y);
+            }
         }
         private static void OnClose()
         {
@@ -720,7 +769,7 @@ namespace HoseRenderer
         }
         private static void KeyDown(IKeyboard arg1, Key arg2, int arg3)
         {
-            if (arg2 == Key.Escape)
+            if (arg2 == Key.Escape && !IsGUICalled)
             {
                 window.Close();
             }
@@ -821,7 +870,7 @@ namespace HoseRenderer
             }
         }
         /// <summary>
-        /// Prints the PowerGL Logo (not copyrighted I couldn't be arsed)
+        /// Prints the PowerGL Logo
         /// </summary>
         public static void PrintFunnyLogo()
         {
@@ -838,9 +887,20 @@ namespace HoseRenderer
             Console.ResetColor();
             Console.WriteLine();
         }
-        //private static void BuildGUI()
-        //{
-        //    ImGuiNET.ImGui.ShowDemoWindow();
-        //}
+        private static void BuildPowerGLGUI()
+        {
+            ImGui.Text($"FPS:{FPS}");
+            ImGui.SetWindowFontScale(1.5f);
+            ImGui.BeginMenu("TESTING WINDOWS");
+            ImGui.Text($"<{ImGui.GetMousePos().X}-{ImGui.GetMousePos().Y}>");
+            ImGui.EndMenu();
+            ImGui.LabelText("CMD","CMD");
+            ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN,ImGuiInputTextFlags.EnterReturnsTrue);
+            Thread.Sleep(1);
+            if (CMD_PROC != "")
+            {
+                Debugger.Log(1,"",$"{CMD_PROC}{Environment.NewLine}");
+            }
+        }
     }
 }

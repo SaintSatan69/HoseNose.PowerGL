@@ -620,10 +620,12 @@ namespace HoseRenderer
                             Console.WriteLine("DISPATCH_OPERATION_DIRECTIVE was called yet no object action supplied?");
                             break;
                     }
+                    this.DISPATCH_TARGET_STRING = "";
+                    this.AwaitingDispatchFromNamedPipe = 0;
                 }
                 var camera = this.Camera;
                 //this is object culling when you get too far, going to add object property for setting the culling space on each object
-                if (!(this.PosX < camera.Position.X + this.Culling_Distance && this.PosX > camera.Position.X - this.Culling_Distance) || !(this.PosY < camera.Position.Y + this.Culling_Distance && this.PosY > camera.Position.Y - this.Culling_Distance ) || !(this.PosZ < camera.Position.Z + this.Culling_Distance && this.PosZ > camera.Position.Z - this.Culling_Distance))
+                if (!(this.PosX < camera.Position.X + this.Culling_Distance && this.PosX > camera.Position.X - this.Culling_Distance) || !(this.PosY < camera.Position.Y + this.Culling_Distance && this.PosY > camera.Position.Y - this.Culling_Distance ) || !(this.PosZ < camera.Position.Z + this.Culling_Distance && this.PosZ > camera.Position.Z - this.Culling_Distance) || MainRenderer.IsGUICalled)
                 {
                     return;
                 }
@@ -750,8 +752,6 @@ namespace HoseRenderer
                         GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
                     }
                     DebugMessages.PrintDebugMSG("OPENGL is drawing the triangles",Print_debug_msg);
-                    this.DISPATCH_TARGET_STRING = "";
-                    this.AwaitingDispatchFromNamedPipe = 0;
                 }
             }
             /// <summary>

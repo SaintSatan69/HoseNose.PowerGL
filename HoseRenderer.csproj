@@ -38,6 +38,9 @@
     <None Update="CLibs\glfw3.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="imgui.ini">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="IPCFiles\Nothingfile">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
