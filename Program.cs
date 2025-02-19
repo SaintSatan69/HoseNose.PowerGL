@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Drawing;
 using ImGuiNET;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 
 
@@ -66,6 +67,10 @@ namespace HoseRenderer
         private static int _Frame_counter = 0;
 
         private static Shape[] Shapes = [];
+        /// <summary>
+        /// A int that states how many shapes are loaded into the engine at a given time.
+        /// </summary>
+        public static int GlobalShapeCount = 0;
 
         private static uint _player_1_controllerObject;
         private static uint _player_2_controllerObject;
@@ -404,6 +409,11 @@ namespace HoseRenderer
                 }
             });
             FPS_Thread.Start();
+
+
+            GlobalShapeCount = Shapes.Length;
+
+            //this is probably get removed since multiple threads cannot access the OpenGL context without it getting angry
             if (FLAGS[4] == "MULTITHREADED_RENDERER") {
                 int _num_renderer_threads;
                 int _num_Shapes = Shapes.Length;
@@ -895,12 +905,140 @@ namespace HoseRenderer
             ImGui.Text($"<{ImGui.GetMousePos().X}-{ImGui.GetMousePos().Y}>");
             ImGui.EndMenu();
             ImGui.LabelText("CMD","CMD");
-            ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN,ImGuiInputTextFlags.EnterReturnsTrue);
+            if(ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN,ImGuiInputTextFlags.EnterReturnsTrue)){ 
+                ImGui.Text(ConsoleCommandHandler.ExecutePGLCommand(CMD_PROC));
+            }
             Thread.Sleep(1);
             if (CMD_PROC != "")
             {
                 Debugger.Log(1,"",$"{CMD_PROC}{Environment.NewLine}");
             }
+        }
+        /// <summary>
+        /// Goes around the the inablity to resize an array and will handle such such an action so that new shapes can be added
+        /// </summary>
+        /// <exception cref="InvalidDataException"></exception>
+        private static void ExpandShapeArray()
+        {
+            int cur_len = Shapes.Length;
+            Shape[] new_array = new Shape[cur_len + 1];
+            for (int i = 0; i < Shapes.Length; i++) {
+                new_array[i] = Shapes[i];
+            }
+            if (new_array.Length > Shapes.Length + 2)
+            {
+                EngineLogger.Log("FATAL ERROR ENGINE CRASH FROM OVER EXPANSION OF THE SHAPE ARRAY");
+                throw new InvalidDataException("Array Got Oversized and will crash at .render() so we crash before the render crash");
+            }
+            Shapes = new_array;
+            GlobalShapeCount = Shapes.Length;
+        }
+        /// <summary>
+        /// The Public method to Modify Any Shape and select properties that won't cause the engine to crash from anywhere, Caution calling this for adding new shapes.
+        /// </summary>
+        /// <returns>
+        /// -1 if theres no matches for property, -2 if there is a subfunction error, 0 for success.
+        /// </returns>
+        public static int ModifyShapeProperty(int ShapeNumber,string Property,float X,float Y,float Z,string? shader ,string? frag, float? Size)
+        {//TODO me in the future, In our infinite design we forgor to include a string parameter for the texture path lmaoooo
+            if (ShapeNumber > Shapes.Length - 1)
+            {
+                EngineLogger.Log($"Engine called to modify a shape with number {ShapeNumber} but that is greater then the amount of shapes in the global state which is {GlobalShapeCount}");
+                return 0;
+            }
+            //while techically NEW isn't a property of the PowerGL shape class in the area of changing the state of the engine shapes it lives here
+            if (Property == "NEW")
+            {
+                try
+                {
+                    Shape new_shape = new Shape("cube", new Vector3(X,Y,Z), (uint)ShapeNumber, 0, 0, shader, frag, $@"{Application_Directory}\randompictures\White.png", Vector3.Zero, 1f, Vector3.One, Vector3.Zero, 0, Vector3.Zero, 0);
+                    new_shape.Glcontext = Gl;
+                    //TODO make this lookup the textures to save on compute by using already compiled textures to stop lower end stuttering ( we are not going to end up like unreal engine :|> )
+                    new_shape.CompileShader();
+                    if (_Name_to_texture_dict.ContainsKey(shader)) {
+                        new_shape.CompiledTexture = _Name_to_texture_dict[shader];
+                    }
+                    else
+                    {
+                        new_shape.CompileTexture();
+                        _Name_to_texture_dict.Add(shader,new_shape.CompiledTexture);
+                    }
+                    ExpandShapeArray();
+                    Shapes[^1] = new_shape;
+                    return 0;
+                }
+                catch (Exception ex)
+                {
+                    EngineLogger.Log($"//EXCEPTION// ATTEMPTING TO ADD NEW SHAPE TO GLOBAL STATE EXCEPTION {ex.Message} {Environment.NewLine}, STACKTRACE {ex.StackTrace}{Environment.NewLine}");
+                    return -2;
+                }
+            }
+            if (Property == "Position")
+            {
+                try
+                {
+                    Shapes[ShapeNumber].PosX = X;
+                    Shapes[ShapeNumber].PosY = Y;
+                    Shapes[ShapeNumber].PosZ = Z;
+                    return 0;
+                }
+                catch(Exception ex)
+                {
+                    EngineLogger.Log($"//EXCEPTION// Modifting Postions EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                    return -2;
+                }
+            }
+            if (Property == "Rotate")
+            {
+                try
+                {
+                    Shapes[ShapeNumber].RotX = X;
+                    Shapes[ShapeNumber].RotY = Y;
+                    Shapes[ShapeNumber].RotZ = Z;
+                    return 0;
+                }
+                catch(Exception ex)
+                {
+                    EngineLogger.Log($"//EXCEPTION// Modifying Positions EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                    return -2;
+                }
+            }
+            if (Property == "Scale")
+            {
+                try
+                {
+                    if (Size != null) { 
+                        Shapes[ShapeNumber].Size = (float)Size;
+                        return 0;
+                    }
+                    else
+                    {
+                        throw new Exception("Size Cannot be null");
+                    }
+                }
+                catch(Exception ex)
+                {
+                    EngineLogger.Log($"//EXCEPTION// Modifying Scale EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                    return -2;
+                }
+            }
+            if (Property == "Stretch")
+            {
+                try
+                {
+                    Shapes[ShapeNumber].StrX = X;
+                    Shapes[ShapeNumber].StrY = Y;
+                    Shapes[ShapeNumber].StrZ = Z;
+                    return 0;
+                }
+                catch(Exception ex)
+                {
+                    EngineLogger.Log($"//EXCEPTION// Modifying Strech EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                    return -2;
+                }
+            }
+            
+            return -1;    
         }
     }
 }
