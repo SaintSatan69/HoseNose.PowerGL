@@ -35,6 +35,10 @@ namespace HoseRenderer
                 len = ioStream.ReadByte() * 16;
                 len += ioStream.ReadByte();
                 Debugger.Log(1, "IPC_NAMED_PIPE", $"BUFFER LEN::{len}::OF IPC_NAMED_PIPE {Environment.NewLine}");
+                if (len < 1)
+                {
+                    return "Pipe Has Nothing To Read";
+                }
                 var inBuffer = new byte[len];
                 ioStream.Read(inBuffer, 0, len);
 

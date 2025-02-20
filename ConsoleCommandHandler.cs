@@ -48,7 +48,7 @@ namespace HoseRenderer
                         case "SCALE":
                             return ExecuteCommand(CommandTypes.SCALE,CMD_SPLAT);
 
-                        case "STRECH":
+                        case "STRETCH":
                             return ExecuteCommand(CommandTypes.STRETCH,CMD_SPLAT);
 
                         case "NEW":
@@ -58,6 +58,11 @@ namespace HoseRenderer
                             return $"{commandstring} is not a valid command";
                             
                     }
+                }
+                if (CMD_SPLAT.Length == 1 && CMD_SPLAT[0].ToUpper() == "HELP")
+                {
+                    return ExecuteCommand(CommandTypes.HELP, CMD_SPLAT);
+                    
                 }
                 else
                 {
@@ -141,7 +146,7 @@ namespace HoseRenderer
                                 Z = Convert.ToSingle(CompleteArgs[i + 1]);
                             }
                         }
-                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num, "Position", X, Y, Z, null, null, null);
+                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num, "Position", X, Y, Z, null, null, null,null);
                         if (_engine_return == 0)
                         {
                             Execution_status = $"MOVE Command Completed Sucessfully on {shape_num}, New pos {X}-{Y}-{Z}";
@@ -189,7 +194,7 @@ namespace HoseRenderer
                                 Z = Convert.ToSingle(CompleteArgs[i + 1]);
                             }
                         }
-                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num,"Rotate",X,Y,Z,null,null,null);
+                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num,"Rotate",X,Y,Z,null,null,null,null);
                         if (_engine_return == 0)
                         {
                             Execution_status = $"ROTATE Command completed successfully on {shape_num}, new rot {X}-{Y}-{Z}";
@@ -227,7 +232,7 @@ namespace HoseRenderer
                                 size = Convert.ToSingle(CompleteArgs[i + 1]);
                             }
                         }
-                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num,"Scale",0,0,0,null,null,size);
+                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num,"Scale",0,0,0,null,null,null,size);
                         if (_engine_return == 0)
                         {
                             Execution_status = $"SCALE Command Completed Successfully {shape_num}, new size is {size}";
@@ -302,7 +307,7 @@ namespace HoseRenderer
                                 }
                             }
                         }
-                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num, "Stretch", X, Y, Z, null, null, null);
+                        int _engine_return = MainRenderer.ModifyShapeProperty(shape_num, "Stretch", X, Y, Z, null, null, null, null);
                         if (_engine_return == 0)
                         {
                             Execution_status = $"STRETCH Command completed successfully on {shape_num}, new stretch {_hidden_stretch}";
@@ -331,6 +336,7 @@ namespace HoseRenderer
                     float Z = 0.0f;
                     string shader_path = "";
                     string frag_path = "";
+                    string text_path = "";
                     try
                     {
                         for (int i = 0; i < CompleteArgs.Length; i++) 
@@ -355,8 +361,12 @@ namespace HoseRenderer
                             {
                                 frag_path = CompleteArgs[i + 1];
                             }
+                            if (CompleteArgs[i].ToUpper() == "TEXTURE")
+                            {
+                                text_path = CompleteArgs[i + 1];
+                            }
                         }
-                        int _engine_return = MainRenderer.ModifyShapeProperty((MainRenderer.GlobalShapeCount + 1),"NEW",X,Y,Z,shader_path,frag_path,null);
+                        int _engine_return = MainRenderer.ModifyShapeProperty((MainRenderer.GlobalShapeCount),"NEW",X,Y,Z,shader_path,frag_path,text_path,null);
                         if (_engine_return == 0)
                         {
                             Execution_status = "NEW command completed successfully";

@@ -111,6 +111,7 @@ namespace HoseRenderer
         private static string CMD_PROC = "";
         private static uint PROC_LEN = 255;
         private static int _char_frametime = 0;
+        private static string GUI_CNS_TEXT = "";
 
 #pragma warning restore CS8618 
         private static readonly float[] Vertices =
@@ -901,13 +902,13 @@ namespace HoseRenderer
         {
             ImGui.Text($"FPS:{FPS}");
             ImGui.SetWindowFontScale(1.5f);
-            ImGui.BeginMenu("TESTING WINDOWS");
             ImGui.Text($"<{ImGui.GetMousePos().X}-{ImGui.GetMousePos().Y}>");
             ImGui.EndMenu();
-            ImGui.LabelText("CMD","CMD");
-            if(ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN,ImGuiInputTextFlags.EnterReturnsTrue)){ 
-                ImGui.Text(ConsoleCommandHandler.ExecutePGLCommand(CMD_PROC));
+            if(ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN,ImGuiInputTextFlags.EnterReturnsTrue)){
+                GUI_CNS_TEXT += $"{ConsoleCommandHandler.ExecutePGLCommand(CMD_PROC)}{Environment.NewLine}";
+                CMD_PROC = "";
             }
+            ImGui.Text(GUI_CNS_TEXT);
             Thread.Sleep(1);
             if (CMD_PROC != "")
             {
@@ -939,9 +940,9 @@ namespace HoseRenderer
         /// <returns>
         /// -1 if theres no matches for property, -2 if there is a subfunction error, 0 for success.
         /// </returns>
-        public static int ModifyShapeProperty(int ShapeNumber,string Property,float X,float Y,float Z,string? shader ,string? frag, float? Size)
+        public static int ModifyShapeProperty(int ShapeNumber,string Property,float X,float Y,float Z,string? shader ,string? frag,string? texture, float? Size)
         {//TODO me in the future, In our infinite design we forgor to include a string parameter for the texture path lmaoooo
-            if (ShapeNumber > Shapes.Length - 1)
+            if (ShapeNumber > Shapes.Length - 1 && Property != "NEW")
             {
                 EngineLogger.Log($"Engine called to modify a shape with number {ShapeNumber} but that is greater then the amount of shapes in the global state which is {GlobalShapeCount}");
                 return 0;
@@ -951,17 +952,27 @@ namespace HoseRenderer
             {
                 try
                 {
-                    Shape new_shape = new Shape("cube", new Vector3(X,Y,Z), (uint)ShapeNumber, 0, 0, shader, frag, $@"{Application_Directory}\randompictures\White.png", Vector3.Zero, 1f, Vector3.One, Vector3.Zero, 0, Vector3.Zero, 0);
+                    string _int_text = "";
+                    if (texture == null)
+                    {
+                        _int_text = @$"{Application_Directory}\Randompictures\white.png";
+                    }
+                    else
+                    {
+                        _int_text = texture;
+                    }
+                    Shape new_shape = new Shape("cube", new Vector3(X,Y,Z), (uint)ShapeNumber, 0, 0, shader, frag, _int_text, Vector3.Zero, 1f, Vector3.One, Vector3.Zero, 0, Vector3.Zero, 0);
                     new_shape.Glcontext = Gl;
+                    new_shape.Camera = Camera;
                     //TODO make this lookup the textures to save on compute by using already compiled textures to stop lower end stuttering ( we are not going to end up like unreal engine :|> )
                     new_shape.CompileShader();
-                    if (_Name_to_texture_dict.ContainsKey(shader)) {
-                        new_shape.CompiledTexture = _Name_to_texture_dict[shader];
+                    if (_Name_to_texture_dict.ContainsKey(_int_text)) {
+                        new_shape.CompiledTexture = _Name_to_texture_dict[_int_text];
                     }
                     else
                     {
                         new_shape.CompileTexture();
-                        _Name_to_texture_dict.Add(shader,new_shape.CompiledTexture);
+                        _Name_to_texture_dict.Add(_int_text,new_shape.CompiledTexture);
                     }
                     ExpandShapeArray();
                     Shapes[^1] = new_shape;
