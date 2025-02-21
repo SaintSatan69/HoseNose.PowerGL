@@ -58,6 +58,9 @@
     <None Update="Model\Sphere.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="PowerGL\PowerGL.psd1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="PowerGL\PowerGL.psm1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

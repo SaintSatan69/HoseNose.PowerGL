@@ -176,30 +176,26 @@ namespace HoseRenderer
                 argstring += ("-" + args[a]);
             }
             EngineLogger.Log($"Engine Initalization Started args {argstring}");
-            if (args.Length > 0) {
-                if (args[0] == "pipe_enable") {
+            FLAGS[3] = "PHYSICS";
+            for (int arg = 0; arg < args.Length; arg++) {
+                if (args[arg].ToUpper() == "PIPE_ENABLE")
+                {
                     FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
                     Console.WriteLine("FLAG IPC_NAMED_PIPE_ENABLE has been enabled");
                 }
-                if (args[0] != "render_extracube")
-                {
-                    FLAGS[1] = "";
-                }
-                else
-                {
-                    FLAGS[1] = "RENDER_DEFAULT_CUBES_REGARDLESS";
-                }
-                if (args[0] == "debug_msg_enable")
+                if (args[arg].ToUpper() == "DEBUG")
                 {
                     FLAGS[2] = "DEBUG";
-
                 }
-                if (args[0] == "DEV_BUGLAND")
+                if (args[arg].ToUpper() == "PHYSICS_DISABLE")
+                {
+                    FLAGS[3] = "";
+                }
+                if (args[arg].ToUpper() == "DEV_BUGLAND")
                 {
                     FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
                     FLAGS[2] = "DEBUG";
                     FLAGS[3] = "PHYSICS";
-                    //FLAGS[4] = "MULTITHREADED_RENDERER";
                     Console.WriteLine("AWAITING DEBUGGER");
                     while (!Debugger.IsAttached)
                     {
@@ -207,6 +203,39 @@ namespace HoseRenderer
                     }
                 }
             }
+
+            //I really need to clean this up
+            //if (args.Length > 0) {
+            //    if (args[0] == "pipe_enable") {
+            //        FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
+            //        Console.WriteLine("FLAG IPC_NAMED_PIPE_ENABLE has been enabled");
+            //    }
+            //    if (args[0] != "render_extracube")
+            //    {
+            //        FLAGS[1] = "";
+            //    }
+            //    else
+            //    {
+            //        FLAGS[1] = "RENDER_DEFAULT_CUBES_REGARDLESS";
+            //    }
+            //    if (args[0] == "debug_msg_enable")
+            //    {
+            //        FLAGS[2] = "DEBUG";
+
+            //    }
+            //    if (args[0] == "DEV_BUGLAND")
+            //    {
+            //        FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
+            //        FLAGS[2] = "DEBUG";
+            //        FLAGS[3] = "PHYSICS";
+            //        //FLAGS[4] = "MULTITHREADED_RENDERER";
+            //        Console.WriteLine("AWAITING DEBUGGER");
+            //        while (!Debugger.IsAttached)
+            //        {
+            //            Thread.Sleep(100);
+            //        }
+            //    }
+            //}
             //make sure to comment this when not debugging the cubes
             //FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
             //FLAGS[1] = "RENDER_DEFAULT_CUBES_REGARDLESS";
@@ -219,7 +248,8 @@ namespace HoseRenderer
             options.Size = new Vector2D<int>(1920, 1080);
             options.Title = "HoseNose.PowerGL";
             options.Position = new Vector2D<int>(0,30);
-            options.VSync = false;
+            //DO NOT TURN VSYNC OFF WITHOUT LOGIC TO WARN THE USER THAT THE ENGINES PHYSICS MIGHT BE A LITTLE WONKY IF ITS DISABLED SINCE A LOT OF PHYSICS ARE CALCULATED ON A FRAME
+            //options.VSync = false;
             Console.WriteLine("HoseNose.PowerGL has been loaded");
             Console.WriteLine($"{options.API.API.ToString()}{options.Size}");
             var Platforms = Window.Platforms.Count;
@@ -700,8 +730,9 @@ namespace HoseRenderer
             }
             if (primaryKeyboard.IsKeyPressed(Key.GraveAccent))
             {
-                if (_Frame_counter >= _Last_frametime_GUI_change + 60)
+                if (_Frame_counter >= _Last_frametime_GUI_change + 30)
                 {
+
                     if (_Gui_Frame_state < 1)
                     {
                         HIDE_SHAPES_FOR_GUI = true;
@@ -715,6 +746,7 @@ namespace HoseRenderer
                         _Last_frametime_GUI_change = _Frame_counter;
                     }
                 }
+                Thread.Sleep(10);
             }
             if (primaryKeyboard.IsKeyPressed(Key.T))
             {
