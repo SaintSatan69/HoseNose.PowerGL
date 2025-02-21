@@ -3,6 +3,9 @@ using System.Numerics;
 
 namespace HoseRenderer
 {
+    /// <summary>
+    /// From the Silk.Net Docs, Used by the Model Objects
+    /// </summary>
     public struct Vertex
     {
         public Vector3 Postion;

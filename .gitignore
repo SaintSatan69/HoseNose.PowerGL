@@ -8,6 +8,14 @@
 */randompictures/stress_test
 /PowerGL/IGN-*.*
 
+
+#PRIVATE KEY FOR STRONG SIGNING (just making sure they are excluded incase i screw up granted these would be self signed certs so not that bad :|)
+*.KEY
+*.KEYS
+*.cer
+*.pem
+*.crt
+
 # User-specific files
 *.rsuser
 *.suo

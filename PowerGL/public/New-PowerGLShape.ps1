@@ -39,7 +39,7 @@ function New-PowerGLShape() {
         Write-Warning "Shearing on the Z axis is very broken it won't shear the shape correctly and will instead morph the shape into a pyramid like shape"
     }
     if ($BoingFactor -gt [float]1) {
-        Write-Warning "BoingFactors > then 1 will cause the shape to accellerate per bounce, Which normally would be fine if this didn't use AABB (collison boxes) if it gets fast enough it will just clip through things"
+        Write-Warning "BoingFactors > then 1 will cause the shape to accellerate per bounce, Which normally would be fine if this didn't use AABB (collision boxes) if it gets fast enough it will just clip through things"
     }
     $pos_vec = [System.Numerics.Vector3]::new($PosX, $posY, $posZ)
     $rot_vec = [System.Numerics.Vector3]::new($RotX, $RotY, $RotZ)

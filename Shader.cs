@@ -4,11 +4,20 @@ using Silk.NET.OpenGL;
 
 namespace HoseRenderer
 {
+    /// <summary>
+    /// From the silk.net tutorials and since it works im not touching it as its heavily used so props to them for this
+    /// </summary>
     public class Shader : IDisposable
     {
         private uint _handle;
         private GL _gl;
-
+        /// <summary>
+        /// Compiles the GLSL onto OpenGL this is where the shapes having an openGL context is important
+        /// </summary>
+        /// <param name="gl"></param>
+        /// <param name="VertexPath"></param>
+        /// <param name="FragmentPath"></param>
+        /// <exception cref="Exception"></exception>
         public Shader(GL gl, string VertexPath, string FragmentPath) { 
             _gl = gl;
 
@@ -30,11 +39,19 @@ namespace HoseRenderer
             _gl.DeleteShader(fragment);
 
         }
-
+        /// <summary>
+        /// Signals to opengl that the rendercall needs to use this texture for a little bit
+        /// </summary>
         public void use()
         {
             _gl.UseProgram(_handle);
         }
+        /// <summary>
+        /// Applies the specified name to the shader (make sure your shader implements this uniform)
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="value"></param>
+        /// <exception cref="Exception"></exception>
         public void SetUniform(string name, int value) { 
             int location = _gl.GetUniformLocation(_handle, name);
             if (location == -1) {
@@ -42,6 +59,12 @@ namespace HoseRenderer
             }
             _gl.Uniform1(location, value);
         }
+        /// <summary>
+        /// Applies the specified name to the shader (make sure your shader implements this uniform)
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="value"></param>
+        /// <exception cref="Exception"></exception>
         public unsafe void SetUniform(string name, Matrix4x4 value) {
             int location = _gl.GetUniformLocation(_handle, name);
 
@@ -50,6 +73,12 @@ namespace HoseRenderer
             }
             _gl.UniformMatrix4(location,1,false, (float*) &value);
         }
+        /// <summary>
+        /// Applies the specified name to the shader (make sure your shader implements this uniform)
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="value"></param>
+        /// <exception cref="Exception"></exception>
         public void SetUniform(string name, float value)
         {
             int location = _gl.GetUniformLocation(_handle, name);
@@ -59,6 +88,12 @@ namespace HoseRenderer
             }
             _gl.Uniform1(location, value);
         }
+        /// <summary>
+        /// Applies the specified name to the shader (make sure your shader implements this uniform)
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="value"></param>
+        /// <exception cref="Exception"></exception>
         public void SetUniform(string name, Vector3 value) { 
             int location = _gl.GetUniformLocation (_handle, name);
             if (location == -1) {
@@ -66,6 +101,9 @@ namespace HoseRenderer
             }
             _gl.Uniform3(location, value.X,value.Y,value.Z);
         }
+        /// <summary>
+        /// Disposes of the shader
+        /// </summary>
         public void Dispose()
         {
             _gl.DeleteProgram(_handle);
