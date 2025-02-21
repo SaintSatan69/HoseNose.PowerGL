@@ -17,7 +17,7 @@ $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX -1.0 -posy -1.0 -posz 2.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Strz 3.0 -size 0.5
 $shapecount++
 $Shape_array += $shape
-$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX -1.0 -posy 5.0 -posz 2.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -FragmentPath "C:\Github\HoseRenderer\Shaders\Clouds_1.frag" -size 100
+$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX -1.0 -posy 5.0 -posz 2.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -FragmentPath "$($PSScriptRoot)\Shaders\Clouds_1.frag" -size 100
 $shapecount++
 $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 1.5 -posy 5.0 -posz 0.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Collision 1 -size 2.0 -InitalMomentumY -0.01 -boingfactor 0.5
