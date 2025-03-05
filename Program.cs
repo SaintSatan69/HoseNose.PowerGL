@@ -12,6 +12,7 @@ using System.Drawing;
 using ImGuiNET;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 
 
@@ -61,6 +62,10 @@ namespace HoseRenderer
         private static float scale = 1.0f;
 
         private static string[] FLAGS = new string[10];
+        /// <summary>
+        /// The Engine Config Object Represents the way the developer inteded to use the avaiable editable attributes of the engine
+        /// </summary>
+        public static EngineConfiguration Config;
 
         private static Dictionary<string,Texture> _Name_to_texture_dict = new();
 
@@ -202,8 +207,56 @@ namespace HoseRenderer
                         Thread.Sleep(100);
                     }
                 }
+                if (args[arg].ToUpper() == "CONFIGFILE")
+                { 
+                    try
+                    {
+                        Config = EngineConfiguration.ReadEngineConfig(args[arg + 1]);
+                        FLAGS[4] = "Engine_Config_Read";
+                    }
+                    catch (Exception ex) 
+                    {
+                        EngineLogger.Log($"//WARNING// Failed to read Engine config from {args[arg + 1]} for reason {ex.Message}");
+                    }
+                }
             }
+            if (FLAGS[4] != "Engine_Config_Read")
+            {
+                //technically i could then use this data to make the engine_location property but I would rather make sure its defined in the config that this will attempt to discover incase the dev desides to make the engines default assets not live next to the engine
+                var files = Directory.EnumerateFiles(
+                    AppContext.BaseDirectory,
+                    "*.EngineConfig"
+                );
+                if (files == null)
+                {
 
+                    var user_profile_Search = Directory.EnumerateFiles(
+                        UserDir + @"\PowerGL",
+                        "*.EngineConfig",
+                        SearchOption.AllDirectories
+                    );
+                    if (user_profile_Search != null)
+                    {
+                        string config_file = user_profile_Search.First();
+                        EngineLogger.Log($"Engine config file(s) found total count {user_profile_Search.Count()}: Loaded config {config_file}");
+                        Config = EngineConfiguration.ReadEngineConfig(config_file);
+                    }
+                    else
+                    {
+                        EngineLogger.Log("No Engine Config Provided or Read Successfully generating now");
+                        Config = EngineConfiguration.ReadEngineConfig("");
+                        EngineLogger.Log(@$"Generated new engine config at {UserDir}\PowerGL\PowerGL.EngineConfig");
+                    }
+                }
+                else
+                {
+                    string config_file = files.First();
+                    EngineLogger.Log($"Engine config file(s) found total count {files.Count()}: Loaded config {config_file}");
+                    Config = EngineConfiguration.ReadEngineConfig(config_file);
+                }
+                FLAGS[4] = "Engine_Config_Read";
+            }
+            
             //I really need to clean this up
             //if (args.Length > 0) {
             //    if (args[0] == "pipe_enable") {
@@ -245,9 +298,27 @@ namespace HoseRenderer
             PrintFunnyLogo();
 
             WindowOptions options = WindowOptions.Default;
-            options.Size = new Vector2D<int>(1920, 1080);
-            options.Title = "HoseNose.PowerGL";
-            options.Position = new Vector2D<int>(0,30);
+            if (FLAGS[4] != "Engine_Config_Read") {
+                // FALL BACK OPTIONS IN THE EVENT A CONFIG LOADING ERROR HAPPENS
+                options.Size = new Vector2D<int>(1920, 1080);
+                options.Title = "HoseNose.PowerGL";
+                options.Position = new Vector2D<int>(0, 30);
+                options.VSync = true;
+            }
+            else
+            {
+                try
+                {
+                    options.Size = new Vector2D<int>(Config.WindowX, Config.WindowY);
+                    options.Title = Config.WindowTitle;
+                    options.Position = new Vector2D<int>(0, 30);
+                    options.VSync = Config.IsVSyncEnabled;
+                }
+                catch (Exception ex) 
+                {
+                    EngineLogger.Log($"//CRITICAL FAILURE// CONFIGURATION IS INVALID EXCEPTION MESSAGE: {ex.Message}{Environment.NewLine}");
+                }
+            }
             //DO NOT TURN VSYNC OFF WITHOUT LOGIC TO WARN THE USER THAT THE ENGINES PHYSICS MIGHT BE A LITTLE WONKY IF ITS DISABLED SINCE A LOT OF PHYSICS ARE CALCULATED ON A FRAME
             //options.VSync = false;
             Console.WriteLine("HoseNose.PowerGL has been loaded");
@@ -258,22 +329,15 @@ namespace HoseRenderer
             //why must techonology not like powershell :( (we are cheating by having powershell just do the control of shapes engine, the shape properties and when this program is launched leaving
             //this to do the rendering calls to OpenGL through Silk.Net)
             Console.WriteLine($"{window.API.API} {window.WindowState}");
-
-            //SharedFileIPC.InitalizeFileIPC();
-            //this is for debugging the rendering engine not showing my shapes :( (Fixed that still leaving all this here for main engine debugging)
-            //Shape[] shape = new Shape[2];
-            //shape[0] = new Shape("Cube", new Vector3(2f, 3f, 3f), 1, 0, 0, null, null, null, null, null, ".\\randompictures\\silk.png", Vector3.Zero,1.0f, new Vector3(0.0f,0.0f,0.0f));
-            //shape[1] = new Shape("Cube", new Vector3(1f, 1f, 0f), 2, 0, 0, null, null, null, null, null, ".\\randompictures\\PDQ_wallpaper.png", new Vector3(0.0f,0.0f,0.0f),2.0f, new Vector3(0.5f,0.0f,0.0f));
             if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE") {
-                //VERY LIKELY CHANCE WE GET A RACE CONDITION BECAUSE BOTH PROGRAMS ARE SINGLE THREADED FOR ALL THEIR LOGIC BESIDES IN LIBRARIES AND OTHER THINGS SO WE CAN JUST SLEEP THE APPLICATION ONCE
-                //IT STARTS SO POWERSHELL CAN CONSTRUCT THE NAMED PIPE AND AWAIT THE RENDERER TO CONNECT (THIS WORKS CORRECTLY NAMED PIPES HOWER ARE SYNCHORNOUS SO THE NAMED PIPE WILL DEADLOCK THE 
-                //APPLICATION ATTEMPTING TO READ THE BUFFER)
+                // We sleep here to give powershell enough time after the program starts to create the named pipe server it could be faster, but im not tempting fate by getting close and closer to a thread lock
                 Thread.Sleep(2000);
                 Pipe = SharedFileIPC.AttachToOrchastratorNamedPipe();
                 PipeThread = new Thread(() => {
                     Thread.CurrentThread.IsBackground = true;
                     while (true)
                     {
+                        //May not be thread safe but fuck it we ball, its just to tell the Pipe client to chill out while the GUI is active
                         while (IsGUICalled)
                         {
                             Thread.Sleep(10);
@@ -296,7 +360,7 @@ namespace HoseRenderer
             }
             catch (Exception ex) 
             {
-                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}, IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
+                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
                 throw new InvalidOperationException("ENGINE HAS CRASHED LOOK AT THE LOG FILE");
             }
             window.Dispose();
@@ -332,7 +396,7 @@ namespace HoseRenderer
             {
                 mouse = input.Mice[0];
             }
-            MainRenderer.EngineLogger.Log($"Mouse and keyboards enumerated there are {input.Keyboards.Count} keyboards and {input.Mice.Count} mice, Keyboard1 is {input.Keyboards[0].Name} and mouse1 is {input.Mice[0].Name}");
+            MainRenderer.EngineLogger.Log($"Mouse and keyboards enumerated there are {input.Keyboards.Count} keyboards and {input.Mice.Count} mice");
             Gl = GL.GetApi(window);
             LoadObjects();
             Console.WriteLine($"Shapes array from LOAD_OBJECTS:{Shapes.Length}");
