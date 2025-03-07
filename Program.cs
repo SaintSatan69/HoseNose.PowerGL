@@ -24,6 +24,15 @@ namespace HoseRenderer
     public class MainRenderer
     {
 #pragma warning disable CS8618 
+
+        //Engine specific data used by thing checking engine versioning
+        /// <summary>
+        /// The Static sting of the engine verion
+        /// </summary>
+        public static readonly string EngineVersion = "0.0.2.0";
+
+
+
         //OpenGL Things
         private static IWindow window;
 
@@ -227,7 +236,7 @@ namespace HoseRenderer
                     AppContext.BaseDirectory,
                     "*.EngineConfig"
                 );
-                if (files == null)
+                if (files == null || files.Count() == 0)
                 {
 
                     var user_profile_Search = Directory.EnumerateFiles(

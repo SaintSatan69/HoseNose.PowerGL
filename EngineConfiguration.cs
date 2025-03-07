@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using Newtonsoft.Json;
+using System.Diagnostics;
+using System.Text.Json;
 namespace HoseRenderer
 {
     /// <summary>
@@ -10,31 +12,43 @@ namespace HoseRenderer
         /// <summary>
         /// A Serial Number 
         /// </summary>
+        [JsonProperty]
         public int ConfigurationNumber { get; private set; } = 0;
         /// <summary>
         /// The Width of the Window
         /// </summary>
-        public int WindowX { get; set; } = 1920;
+        [JsonProperty]
+        public int WindowX { get; private set; } = 1920;
         /// <summary>
         /// The Height of the window
         /// </summary>
-        public int WindowY { get; set; } = 1080;
+        [JsonProperty]
+        public int WindowY { get; private set; } = 1080;
         /// <summary>
         /// The Path to the folder that contains the HoseRenderer exe and DLL for uniform resource access to engine default resources
         /// </summary>
+        [JsonProperty]
         public string EnginePath { get; } = @"C:\Program Files\PowerShell\7-preview\Modules\PowerGl";
         /// <summary>
         /// The Path to the .EngineConfig used at run time to configure some engine specific settings such as window size, title, etc.
         /// </summary>
+        [JsonProperty]
         public string ConfigFilePath { get; } = @"C:\Program Files\Powershell\7-preview\Modules\PowerGL\PowerGL.EngineConfig";
         /// <summary>
         /// A bool determining whether vsync is enabled. there is no implementation of a tick speed so physics will move faster if the FPS is over 60
         /// </summary>
-        public bool IsVSyncEnabled { get; } = true;
+        [JsonProperty]
+        public bool IsVSyncEnabled { get; private set; } = true;
         /// <summary>
         /// The Title of the PowerGL window
         /// </summary>
-        public string WindowTitle { get; } = "HoseNose.PowerGL";
+        [JsonProperty]
+        public string WindowTitle { get; private set; } = "HoseNose.PowerGL";
+        /// <summary>
+        /// The Version of the engine that the configuration was made in
+        /// </summary>
+        [JsonProperty]
+        public string EngineBuildVersion { get; private set; } = MainRenderer.EngineVersion;
         /// <summary>
         /// Main constructor for the engine configuration
         /// </summary>
@@ -68,7 +82,7 @@ namespace HoseRenderer
             {
                 byte[] _Config_File = File.ReadAllBytes(ConfigFilePath);
                 Utf8JsonReader utfreader = new Utf8JsonReader(_Config_File);
-                return JsonSerializer.Deserialize<EngineConfiguration>(ref utfreader);
+                return System.Text.Json.JsonSerializer.Deserialize<EngineConfiguration>(ref utfreader);
             }
             else
             {
@@ -86,7 +100,7 @@ namespace HoseRenderer
         {
             config.ConfigurationNumber++;
             Stream Config_file = File.Open(ConfigFilePath,FileMode.Create,FileAccess.ReadWrite,FileShare.Read);
-            Config_file.Write(JsonSerializer.SerializeToUtf8Bytes(config,JsonSerializerOptions.Default));
+            Config_file.Write(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(config,JsonSerializerOptions.Default));
             Config_file.Close();
         }
         /// <summary>
@@ -96,6 +110,32 @@ namespace HoseRenderer
         private static EngineConfiguration GenerateDefaultConfig()
         {
             return new EngineConfiguration();
+        }
+        /// <summary>
+        /// Modifies the current engine configuration and writes it to the same file it currently is
+        /// </summary>
+        public void UpdateConfiguration(string Property, string Value,bool WriteConfig)
+        {
+            switch (Property)
+            {
+                case "WindowX":
+                    this.WindowX = Convert.ToInt32(Value);
+                    break;
+                case "WindowY":
+                    this.WindowY = Convert.ToInt32(Value);
+                    break;
+                case "Title":
+                    this.WindowTitle = Value;
+                    break;
+                case "Vsync":
+                    this.IsVSyncEnabled = Convert.ToBoolean(Value);
+                    break;
+                default:
+                    return;
+            }
+            if (WriteConfig) {
+                WriteEngineConfig(this.ConfigFilePath, this);
+            }
         }
     }
 }
