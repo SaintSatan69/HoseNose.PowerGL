@@ -66,7 +66,7 @@ namespace HoseRenderer
                 ioStream.WriteByte((byte)(len & 16));
                 ioStream.Write(outbuffer, 0, len);
                 ioStream.Flush();
-
+                
                 return outbuffer.Length + 2;
             }
             /// <summary>

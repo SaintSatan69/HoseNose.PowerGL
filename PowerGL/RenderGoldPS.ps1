@@ -8,7 +8,7 @@ $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX -1.0 -posy 1.0 -posz -2.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -RotX 45 -Strz 2.5 -size 0.5
 $shapecount++
 $Shape_array += $shape
-$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 1.0 -posy -5.0 -posz 0.0 -texturepath "$($PSScriptRoot)\Randompictures\gold_ps.png" -size 2.0 -Collision 1 -InitalMomentumY 0.01 -boingfactor 0.9 -IsEffectedByGravity:$true
+$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 1.0 -posy -5.0 -posz 0.0 -texturepath "$($PSScriptRoot)\Randompictures\gold_ps.png" -size 2.0 -Collision 1 -InitalMomentumY 0.01 -Restitution 0.9 -IsEffectedByGravity:$true
 $shapecount++
 $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX -1.0 -posy -0.1 -posz -2.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -RotX -45 -Strz 2.5 -size 0.5
@@ -20,13 +20,13 @@ $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX -1.0 -posy 5.0 -posz 2.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -FragmentPath "$($PSScriptRoot)\Shaders\Clouds_1.frag" -size 100
 $shapecount++
 $Shape_array += $shape
-$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 1.5 -posy 5.0 -posz 0.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Collision 1 -size 2.0 -InitalMomentumY -0.01 -boingfactor 0.5
+$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 1.5 -posy 5.0 -posz 0.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Collision 1 -size 2.0 -InitalMomentumY -0.01 -Restitution 0.5
 $shapecount++
 $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 0.0 -posy -20.0 -posz 0.0 -texturepath "$($PSScriptRoot)\Randompictures\grass_1.png" -Collision 1 -StrX 50 -StrZ 50
 $shapecount++
 $Shape_array += $shape
-$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 0.0 -posy 5.0 -posz 3.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Collision 1 -InitalMomentumY -0.01 -boingfactor 0.5
+$shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 0.0 -posy 5.0 -posz 3.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Collision 1 -InitalMomentumY -0.01 -Restitution 0.5
 $shapecount++
 $Shape_array += $shape
 $shape = New-PowerGLShape -shapename "Cube" -shapenum $shapecount -PosX 3.0 -posy 5.0 -posz 3.0 -texturepath "$($PSScriptRoot)\Randompictures\white.png" -Collision 1 -Controllable 1 -player 1
@@ -36,7 +36,7 @@ $e = [gc]::GetTotalAllocatedBytes($true)
 Write-Output "the end total of shapes is $shapecount using $($e - $s) bytes"
 initialize-PowerGL -phase 1
 initialize-PowerGL -phase 2 -shapesarray $Shape_array
-Start-PowerGL -programflag "pipe_enable"
+Start-PowerGL -programflag "DEV_BUGLAND"
 $pipe = initialize-PowerGL -phase 3
 $pipe_string = "DEBUG:PIPETALKED"
 $pipe_len = $pipe.WriteDirective($pipe_string)

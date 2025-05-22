@@ -1,12 +1,13 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Security.Policy;
 using System.Text.Json;
 namespace HoseRenderer
 {
     /// <summary>
     /// An Object Representing the Render engines configuration to be serialized and deserialized from the ENGINECONFIG.ENGINECONFIG json file
     /// </summary>
-    public class EngineConfiguration
+    public class EngineConfiguration : IEquatable<EngineConfiguration?>
     {
         //MAKE SURE IF YOU ADD MORE PROPERTIES YOU GIVE THEM DEFAULT PROPERTIES FOR WHEN GENERATEDEFAULTCONFIG() IS CALLED
         /// <summary>
@@ -49,6 +50,22 @@ namespace HoseRenderer
         /// </summary>
         [JsonProperty]
         public string EngineBuildVersion { get; private set; } = MainRenderer.EngineVersion;
+
+        /// <summary>
+        /// States whether or not the http listener gets enabled as an alternate API to the named pipe
+        /// </summary>
+        [JsonProperty]
+        public bool IsHTTPAPIEnabled { get; private set; } = false;
+        /// <summary>
+        /// States whether or not the listener is readonly {GET}
+        /// </summary>
+        [JsonProperty]
+        public bool IsHTTPReadOnly {  get; private set; } = false;
+        /// <summary>
+        /// The Port at which the HTTP API would be listening to
+        /// </summary>
+        [JsonProperty]
+        public int HTTPPort { get; private set; } = 6969;
         /// <summary>
         /// Main constructor for the engine configuration
         /// </summary>
@@ -114,7 +131,7 @@ namespace HoseRenderer
         /// <summary>
         /// Modifies the current engine configuration and writes it to the same file it currently is
         /// </summary>
-        public void UpdateConfiguration(string Property, string Value,bool WriteConfig)
+        public void UpdateConfiguration(string Property, string Value)
         {
             switch (Property)
             {
@@ -133,9 +150,23 @@ namespace HoseRenderer
                 default:
                     return;
             }
-            if (WriteConfig) {
-                WriteEngineConfig(this.ConfigFilePath, this);
-            }
+        }
+        public void SaveConfig()
+        {
+            WriteEngineConfig(this.ConfigFilePath, this);
+        }
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as EngineConfiguration);
+        }
+
+        public bool Equals(EngineConfiguration? other)
+        {
+            return other is not null &&
+                   WindowX == other.WindowX &&
+                   WindowY == other.WindowY &&
+                   IsVSyncEnabled == other.IsVSyncEnabled &&
+                   WindowTitle == other.WindowTitle;
         }
     }
 }
