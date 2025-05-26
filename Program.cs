@@ -391,7 +391,7 @@ namespace HoseRenderer
                     }
                 }
                 HttpListener APISERVER = new();
-                APISERVER.Prefixes.Add($"http://+:{Port}/api/shapes/");
+                APISERVER.Prefixes.Add($"http://localhost:{Port}/api/shapes/");
                 APISERVER.Start();
                 Logger HttpAPILogger = new Logger("HTTPAPI", null);
                 Thread HTTPThread = new Thread(() =>
@@ -412,13 +412,21 @@ namespace HoseRenderer
                             //Check the user agent to log incase the user agent isn't powershell which isn't supported but it still will respond
                             if (Request.UserAgent.Contains("PowerShell"))
                             {
-                                Debugger.Log(1, "", "PowerShell Request detected YIPPE");
+                                Debugger.Log(1, "", $"PowerShell Request detected YIPPE{Environment.NewLine}");
                             }
                             else
                             {
                                 HttpAPILogger.Log($"Non Powershell user agent made the request user agent is {Request.UserAgent}, If this is a web browser it may not behave correctly");
                             }
-                            HttpObject? requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
+                            HttpObject? requestData = null;
+                            try
+                            {
+                                requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
+                            }
+                            catch
+                            {
+                                requestData = null;
+                            }
                             if (requestData == null && Request.HttpMethod == HttpMethod.Post.ToString())
                             {
                                 HttpAPILogger.Log("Incomplete Request Sent");
@@ -450,43 +458,49 @@ namespace HoseRenderer
                                 }
                                 else
                                 {
-                                    StringBuilder JSON_BUILDER = new StringBuilder();
-                                    JSON_BUILDER.Append('[');
+                                    //StringBuilder JSON_BUILDER = new StringBuilder();
+                                    //JSON_BUILDER.Append('[');
                                     //Might thread lock if its trying to render while also trying to serialize it, might need to add a deep clone and synchronization into it and store a copy
+                                    ShapeHttpObjectCollectionEntry[] shapeHttpObjectCollectionEntries = new ShapeHttpObjectCollectionEntry[Shapes.Length];
+                                    int Indexer = 0;
                                     foreach (Shape shape in Shapes)
                                     {
-                                        JSON_BUILDER.Append('{');
-                                        JSON_BUILDER.Append($"ShapeName: {shape.ShapeName}");
-                                        JSON_BUILDER.Append($"ShapeNumber: {shape.ShapeNum},");
-                                        JSON_BUILDER.Append($"PosX: {shape.PosX},");
-                                        JSON_BUILDER.Append($"PosY: {shape.PosY},");
-                                        JSON_BUILDER.Append($"PosZ: {shape.PosZ},");
-                                        JSON_BUILDER.Append($"RotX: {shape.RotX},");
-                                        JSON_BUILDER.Append($"RotY: {shape.RotY},");
-                                        JSON_BUILDER.Append($"RotZ: {shape.RotZ},");
-                                        JSON_BUILDER.Append($"StrX: {shape.StrX},");
-                                        JSON_BUILDER.Append($"StrY: {shape.StrY},");
-                                        JSON_BUILDER.Append($"StrZ: {shape.StrZ},");
-                                        JSON_BUILDER.Append($"ShrX: {shape.ShrX},");
-                                        JSON_BUILDER.Append($"ShrY: {shape.ShrY},");
-                                        JSON_BUILDER.Append($"ShrZ: {shape.ShrZ},");
-                                        JSON_BUILDER.Append($"Restitution: {shape.Restitution},");
-                                        JSON_BUILDER.Append($"MomentumX: {shape.MomentumX},");
-                                        JSON_BUILDER.Append($"MomentumY: {shape.MomentumY},");
-                                        JSON_BUILDER.Append($"MomentumZ: {shape.MomentumZ}");
-                                        JSON_BUILDER.Append("},");
+                                        shapeHttpObjectCollectionEntries[Indexer] = new ShapeHttpObjectCollectionEntry(shape);
+                                        Indexer++;
                                     }
-                                    JSON_BUILDER[-1] = '}';
-                                    JSON_BUILDER.Append(']');
-                                    string builtString = JSON_BUILDER.ToString();
-                                    Output.Write(Encoding.UTF8.GetBytes(builtString));
+                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shapeHttpObjectCollectionEntries)));
                                     Response.StatusCode = 200;
                                     Response.Close();
                                 }
                             }
-                            else if (Request.HttpMethod == HttpMethod.Post.ToString())
+                            else if (Request.HttpMethod == HttpMethod.Post.ToString() && requestData != null)
                             {
-
+                                float? scale = 0;
+                                if (requestData.Property.ToLower() == "scale")
+                                {
+                                    scale = requestData.ValueX;
+                                }
+                                else
+                                {
+                                    scale = null;
+                                }
+                                int modifyStatus = ModifyShapeProperty((int)requestData.ShapeNumber, requestData.Property, requestData.ValueX, requestData.ValueY, requestData.ValueZ, null, null, null, scale);
+                                if (modifyStatus == 0) {
+                                    Response.StatusCode = 200;
+                                    Response.Close();                                
+                                }
+                                else if (modifyStatus == -1)
+                                {
+                                    Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid was presented to the engine"));
+                                    Response.Close();
+                                }
+                                else if (modifyStatus == -2)
+                                {
+                                    Response.StatusCode= (int)HttpStatusCode.InternalServerError;
+                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber}-{requestData.Property} Please look at the log at {HttpAPILogger.Log_Directory}"));
+                                    Response.Close();
+                                }
                             }
                             else
                             {
@@ -496,6 +510,7 @@ namespace HoseRenderer
                         }
                     }
                 });
+                HTTPThread.Start();
             }
 
 
@@ -1256,6 +1271,13 @@ namespace HoseRenderer
                     EngineLogger.Log($"//EXCEPTION// Modifying Strech EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     return -2;
                 }
+            }
+            if (Property == "Shear")
+            {
+                Shapes[ShapeNumber].ShrX = X;
+                Shapes[ShapeNumber].ShrY = Y;
+                Shapes[ShapeNumber].ShrZ = Z; 
+                return 0;
             }
             return -1;
         }

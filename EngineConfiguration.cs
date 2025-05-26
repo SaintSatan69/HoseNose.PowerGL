@@ -55,7 +55,7 @@ namespace HoseRenderer
         /// States whether or not the http listener gets enabled as an alternate API to the named pipe
         /// </summary>
         [JsonProperty]
-        public bool IsHTTPAPIEnabled { get; private set; } = false;
+        public bool IsHTTPAPIEnabled { get; private set; } = true;
         /// <summary>
         /// States whether or not the listener is readonly {GET}
         /// </summary>

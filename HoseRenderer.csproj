@@ -72,6 +72,9 @@
     <None Update="PowerGL\public\Initalize-PowerGL.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="PowerGL\public\Invoke-PowerGLApiRequest.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="PowerGL\public\Move-PowerGLShape.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
