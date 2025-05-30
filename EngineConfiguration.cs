@@ -66,6 +66,12 @@ namespace HoseRenderer
         /// </summary>
         [JsonProperty]
         public int HTTPPort { get; private set; } = 6969;
+
+        /// <summary>
+        /// The Graphics API Used by the engine, defaults to OpenGL
+        /// </summary>
+        [JsonProperty]
+        public GraphicsAPI API { get; private set; } = GraphicsAPI.OpenGL;
         /// <summary>
         /// Main constructor for the engine configuration
         /// </summary>
@@ -167,6 +173,14 @@ namespace HoseRenderer
                    WindowY == other.WindowY &&
                    IsVSyncEnabled == other.IsVSyncEnabled &&
                    WindowTitle == other.WindowTitle;
+        }
+        /// <summary>
+        /// Scaffolding for adding the vulkan graphics API
+        /// </summary>
+        public enum GraphicsAPI
+        {
+            OpenGL = 1,
+            Vulkan = 2
         }
     }
 }
