@@ -1,4 +1,5 @@
-﻿using Silk.NET.OpenGL;
+﻿using HoseRenderer.ExtraUtils;
+using Silk.NET.OpenGL;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,7 @@ namespace HoseRenderer
                 SCALE,
                 STRETCH,
                 NEW,
+                CONFIG,
             }
             /// <summary>
             /// The Function will parse the given command string and execute the given command if its valid
@@ -34,30 +36,17 @@ namespace HoseRenderer
             {
                 var CMD_SPLAT = commandstring.Split(' ');
                 if (CMD_SPLAT.Length > 1) {
-                    switch (CMD_SPLAT[0].ToUpper())
+                    return CMD_SPLAT[0].ToUpper() switch
                     {
-                        case "HELP":
-                            return ExecuteCommand(CommandTypes.HELP, CMD_SPLAT);
-                            
-                        case "MOVE":
-                            return ExecuteCommand(CommandTypes.MOVE, CMD_SPLAT);
-                            
-                        case "ROTATE":
-                            return ExecuteCommand(CommandTypes.ROTATE,CMD_SPLAT);
-                            
-                        case "SCALE":
-                            return ExecuteCommand(CommandTypes.SCALE,CMD_SPLAT);
-
-                        case "STRETCH":
-                            return ExecuteCommand(CommandTypes.STRETCH,CMD_SPLAT);
-
-                        case "NEW":
-                            return ExecuteCommand(CommandTypes.NEW, CMD_SPLAT);
-
-                        default:
-                            return $"{commandstring} is not a valid command";
-                            
-                    }
+                        "HELP" => ExecuteCommand(CommandTypes.HELP, CMD_SPLAT),
+                        "MOVE" => ExecuteCommand(CommandTypes.MOVE, CMD_SPLAT),
+                        "ROTATE" => ExecuteCommand(CommandTypes.ROTATE, CMD_SPLAT),
+                        "SCALE" => ExecuteCommand(CommandTypes.SCALE, CMD_SPLAT),
+                        "STRETCH" => ExecuteCommand(CommandTypes.STRETCH, CMD_SPLAT),
+                        "NEW" => ExecuteCommand(CommandTypes.NEW, CMD_SPLAT),
+                        "CONFIG" => ExecuteCommand(CommandTypes.CONFIG,CMD_SPLAT),
+                        _ => $"{commandstring} is not a valid command",
+                    };
                 }
                 if (CMD_SPLAT.Length == 1 && CMD_SPLAT[0].ToUpper() == "HELP")
                 {
@@ -83,28 +72,17 @@ namespace HoseRenderer
                 {
                     if (CompleteArgs.Length > 1)
                     {
-                        switch (CompleteArgs[1].ToUpper())
+                        Execution_status = CompleteArgs[1].ToUpper() switch
                         {
-                            case "MOVE":
-                                Execution_status = "[HELP] MOVE Command takes [Int] ShapeNumber, [float] X, [float] Y, [float] Z. X,Y,Z are applied inrelation to world state, not where the shape currently is.";
-                                break;
-                            case "ROTATE":
-                                Execution_status = "[HELP] ROTATE Command takes [int] ShapeNumber, [float] X, [float] Y, [float] Z. X,Y,Z are the degress of rotation applied.";
-                                break;
-                            case "SCALE":
-                                Execution_status = "[HELP] SCALE Command takes [int] ShapeNumber, [float] Size. Size is applied to X,Y,Z.";
-                                break;
-                            case "STRECH":
-                                Execution_status = "[HELP] STRETCH command takes [int] ShapeNumber, [float] X, [float] Y, [float] Z. Value of '*' will cause the engine to use the current strech in the event you only" + 
-                                    " want to modify a stretch on a certain axis, all 3 axis are required.";
-                                break;
-                            case "NEW":
-                                Execution_status = "[HELP][WARNING EXPERIEMENTAL] NEW Command Takes [float] X, [float] Y, [float] Z, [string NO SPACES] PathToVertexShader, [string NO SPACES] PathToFragmentShader. The engine will assign it a shapenumber automatically.";
-                                break;
-                            default:
-                                Execution_status = "[HELP] Invalid HELP Command";
-                                break;
-                        }
+                            "MOVE" => "[HELP] MOVE Command takes [Int] ShapeNumber, [float] X, [float] Y, [float] Z. X,Y,Z are applied inrelation to world state, not where the shape currently is.",
+                            "ROTATE" => "[HELP] ROTATE Command takes [int] ShapeNumber, [float] X, [float] Y, [float] Z. X,Y,Z are the degress of rotation applied.",
+                            "SCALE" => "[HELP] SCALE Command takes [int] ShapeNumber, [float] Size. Size is applied to X,Y,Z.",
+                            "STRECH" => "[HELP] STRETCH command takes [int] ShapeNumber, [float] X, [float] Y, [float] Z. Value of '*' will cause the engine to use the current strech in the event you only" +
+                                                                " want to modify a stretch on a certain axis, all 3 axis are required.",
+                            "NEW" => "[HELP][WARNING EXPERIEMENTAL] NEW Command Takes [float] X, [float] Y, [float] Z, [string NO SPACES] PathToVertexShader, [string NO SPACES] PathToFragmentShader. The engine will assign it a shapenumber automatically.",
+                            "CONFIG" => "[HELP] Config Command Accepts [int] WindowX, [int] WindowY, [string] WindowTitle, [Bool] VsyncEnabled",
+                            _ => "[HELP] Invalid HELP Command",
+                        };
                     }
                     else
                     {
@@ -385,6 +363,81 @@ namespace HoseRenderer
                         else
                         {
                             Execution_status = $"Error {ex.Message}";
+                        }
+                    }
+                }
+                if (action == CommandTypes.CONFIG)
+                {
+                    bool IsModify = false;
+                    for(int i = 0; i < CompleteArgs.Length; i++)
+                    {
+                        if (CompleteArgs[i].ToUpper() == "SAVE")
+                        {
+                            try
+                            {
+                                MainRenderer.Config.SaveConfig();
+                                Execution_status = "Config Saved Successfully";
+                            }
+                            catch(Exception ex)
+                            {
+                                Execution_status = $"Config Save Failed Exception: {ex.Message}";
+                            }
+                        }
+                        if (CompleteArgs[i].ToUpper() == "REVERT")
+                        {
+                            MainRenderer.RevertConfig();
+                        }
+                        if (CompleteArgs[i].ToUpper() == "APPLY")
+                        {
+                            try
+                            {
+                                MainRenderer.ApplyConfig();
+                                Execution_status = "Config Applied Sucessfully";
+                            }
+                            catch( Exception ex)
+                            {
+                                Execution_status = $"Config Apply Failed Exception: {ex.Message}";
+                            }
+                        }
+                        if (CompleteArgs[i].ToUpper() == "MODIFY")
+                        {
+                            IsModify = true;
+                            break;
+                        }
+                    }
+                    if (IsModify)
+                    {
+                        int num_parts = CompleteArgs.Length - 2;
+                        string[] Properties = new string[num_parts / 2];
+                        string[] Values = new string[num_parts / 2];
+                        int num_operations = num_parts / 2;
+                        int propertyindexer = 0;
+                        int valueindexer = 0;
+                        for(int j = 0; j < CompleteArgs.Length; j++)
+                        {
+                            if (CompleteArgs[j].ToUpper() == "WINDOWX")
+                            {
+                                Properties[propertyindexer] = CompleteArgs[j];
+                                Values[valueindexer] = CompleteArgs[j + 1];
+                                propertyindexer++;
+                                valueindexer++;
+                            }
+                            if (CompleteArgs[j].ToUpper() == "WINDOWY")
+                            {
+                                Properties[propertyindexer] = CompleteArgs[j];
+                                Values[valueindexer] = CompleteArgs[j + 1];
+                                propertyindexer++;
+                                valueindexer++;
+                            }
+                        }
+                        try
+                        {
+                            MainRenderer.UpdateRunningConfig(num_parts, Properties, Values);
+                            Execution_status = "Modifying The Running Config Completed Successfully, Please Apply Or Save Config";
+                        }
+                        catch (Exception ex) 
+                        {
+                            Execution_status = $"FAILED to update running config for reasion {ex.Message}";
                         }
                     }
                 }

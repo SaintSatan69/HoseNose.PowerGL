@@ -205,7 +205,7 @@ namespace HoseRenderer
             /// </summary>
             [JsonInclude]
             [JsonRequired]
-            public float BoingFactor { get; set; } = 1f;
+            public float Restitution { get; set; } = 1f;
             /// <summary>
             /// [float] how shiny the shape is when reflective [Not fully implemented]
             /// </summary>
@@ -323,13 +323,13 @@ namespace HoseRenderer
             /// <param name="shear"></param>
             /// <param name="Collision"></param>
             /// <param name="momentum"></param>
-            /// <param name="boingfactor"></param>
+            /// <param name="Restitution"></param>
             /// <param name="iseffectedbygravity"></param>
             /// <param name="player_control"></param>
             /// <param name="player_num"></param>
             /// <param name="ismodel"></param>
             /// <param name="modelpath"></param>
-            public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collision,Vector3 momentum,float boingfactor,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
+            public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collision,Vector3 momentum,float Restitution,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
             {
                 Console.WriteLine("Creating new instance of Shape object");
                 ShapeName = shapename;
@@ -381,7 +381,7 @@ namespace HoseRenderer
                 MomentumX = momentum.X;
                 MomentumY = momentum.Y;
                 MomentumZ = momentum.Z;
-                BoingFactor = boingfactor;
+                Restitution = Restitution;
                 TerminalVelocity = Math.Sqrt((2 * Mass * Gravity));
                 IsEffectedByGravity = iseffectedbygravity;
                 IsModel = ismodel;
@@ -615,6 +615,29 @@ namespace HoseRenderer
                             this.RotY = rotY;
                             this.RotZ = rotZ;
 
+                            break;
+                        case "STRETCH":
+                            if (!DISPATCH_VALUE_OF_MODIFICATION.Contains(':'))
+                            {
+                                Console.WriteLine("there will be no Stretch on this shape, Pipe didn't bring the : for seperating the vector componets correctly");
+                                break;
+                            }
+                            var StretchParts = DISPATCH_VALUE_OF_MODIFICATION.Split(":");
+                            try
+                            {
+                                this.StrX = Convert.ToSingle(StretchParts[0]);
+                            }
+                            catch { }
+                            try
+                            {
+                                this.StrY = Convert.ToSingle(StretchParts[1]);
+                            }
+                            catch { }
+                            try
+                            {
+                                this.StrZ = Convert.ToSingle(StretchParts[2]);
+                            }
+                            catch { }
                             break;
                         default:
                             Console.WriteLine("DISPATCH_OPERATION_DIRECTIVE was called yet no object action supplied?");

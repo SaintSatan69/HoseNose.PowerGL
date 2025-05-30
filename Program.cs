@@ -12,7 +12,9 @@ using System.Drawing;
 using ImGuiNET;
 using System.Runtime.CompilerServices;
 using System.Text;
-
+using System.Text.RegularExpressions;
+using System.Net;
+using System.Text.Json;
 
 
 namespace HoseRenderer
@@ -23,6 +25,20 @@ namespace HoseRenderer
     public class MainRenderer
     {
 #pragma warning disable CS8618 
+
+        //Engine specific data used by thing checking engine versioning
+        /// <summary>
+        /// The Static sting of the engine verion
+        /// </summary>
+        public static readonly string EngineVersion = "0.0.2.0";
+
+        /// <summary>
+        /// The Engine Config Object Represents the way the developer intended to use the avaiable editable attributes of the engine
+        /// </summary>
+        public static EngineConfiguration Config;
+
+        private static EngineConfiguration Previous_config;
+
         //OpenGL Things
         private static IWindow window;
 
@@ -46,7 +62,7 @@ namespace HoseRenderer
         private static Texture texture;
 
         private static Model model;
-        private static Vector3 ModelPosition = new Vector3(2.0f,1.0f,3.0f);
+        private static Vector3 ModelPosition = new Vector3(2.0f, 1.0f, 3.0f);
 
         private static Camera Camera;
 
@@ -62,7 +78,8 @@ namespace HoseRenderer
 
         private static string[] FLAGS = new string[10];
 
-        private static Dictionary<string,Texture> _Name_to_texture_dict = new();
+
+        private static Dictionary<string, Texture> _Name_to_texture_dict = new();
 
         private static int _Frame_counter = 0;
 
@@ -74,12 +91,12 @@ namespace HoseRenderer
 
         private static uint _player_1_controllerObject;
         private static uint _player_2_controllerObject;
-        private static float _player_speed =  0.01f;
+        private static float _player_speed = 0.01f;
 
         /// <summary>
         /// A Global Logger for the main engine can be used by other classes if the log pertains to the functionality of the main engine (Do not have seperate threads touch this)
         /// </summary>
-        public static readonly Logger EngineLogger = new("RenderEngine",null,Environment.CurrentManagedThreadId);
+        public static readonly Logger EngineLogger = new("RenderEngine", null, Environment.CurrentManagedThreadId);
 
         /// <summary>
         /// Used By Other Objects the Static Directory of the powershell 7-preview Modules folder so that all objects that need to reference files inside the engine know where it is on the filesystem
@@ -95,9 +112,6 @@ namespace HoseRenderer
 
         private static Thread FPS_Thread;
         private static uint FPS;
-        
-        //TODO make this thread pool spawn a thread for every 1000 shapes added so the computer doesn't melt trying to render 10k on a single thread and have the FPS be a nice 10 frames per milenium ( THIS IS VERY BUGGY)
-        private static Thread[] ThreadPoolRenderer;
 
         //GUI things
         private static ImGuiController guiController;
@@ -107,11 +121,15 @@ namespace HoseRenderer
         /// <summary>
         /// A Signal handler to tell objects to not render when the GUI is Active since the GUI was being rendered correctly but because of the sky box cloud it was hidden
         /// </summary>
-        public static bool IsGUICalled { get => HIDE_SHAPES_FOR_GUI;  }
+        public static bool IsGUICalled { get => HIDE_SHAPES_FOR_GUI; }
         private static string CMD_PROC = "";
         private static uint PROC_LEN = 255;
         private static int _char_frametime = 0;
         private static string GUI_CNS_TEXT = "";
+
+        //HttpAPI Things
+        private static bool IsEngineAwaitingProcessRequest = false;
+
 
 #pragma warning restore CS8618 
         private static readonly float[] Vertices =
@@ -172,12 +190,14 @@ namespace HoseRenderer
         public static void Main(string[] args)
         {
             string argstring = "";
-            for (int a = 0; a < args.Length; a++) { 
+            for (int a = 0; a < args.Length; a++)
+            {
                 argstring += ("-" + args[a]);
             }
             EngineLogger.Log($"Engine Initalization Started args {argstring}");
             FLAGS[3] = "PHYSICS";
-            for (int arg = 0; arg < args.Length; arg++) {
+            for (int arg = 0; arg < args.Length; arg++)
+            {
                 if (args[arg].ToUpper() == "PIPE_ENABLE")
                 {
                     FLAGS[0] = "IPC_NAMED_PIPE_ENABLE";
@@ -202,6 +222,55 @@ namespace HoseRenderer
                         Thread.Sleep(100);
                     }
                 }
+                if (args[arg].ToUpper() == "CONFIGFILE")
+                {
+                    try
+                    {
+                        Config = EngineConfiguration.ReadEngineConfig(args[arg + 1]);
+                        FLAGS[4] = "Engine_Config_Read";
+                    }
+                    catch (Exception ex)
+                    {
+                        EngineLogger.Log($"//WARNING// Failed to read Engine config from {args[arg + 1]} for reason {ex.Message}");
+                    }
+                }
+            }
+            if (FLAGS[4] != "Engine_Config_Read")
+            {
+                //technically i could then use this data to make the engine_location property but I would rather make sure its defined in the config that this will attempt to discover incase the dev desides to make the engines default assets not live next to the engine
+                var files = Directory.EnumerateFiles(
+                    AppContext.BaseDirectory,
+                    "*.EngineConfig"
+                );
+                if (files == null || files.Count() == 0)
+                {
+
+                    var user_profile_Search = Directory.EnumerateFiles(
+                        UserDir + @"\PowerGL",
+                        "*.EngineConfig",
+                        SearchOption.AllDirectories
+                    );
+                    if (user_profile_Search != null)
+                    {
+                        string config_file = user_profile_Search.First();
+                        EngineLogger.Log($"Engine config file(s) found total count {user_profile_Search.Count()}: Loaded config {config_file}");
+                        Config = EngineConfiguration.ReadEngineConfig(config_file);
+                    }
+                    else
+                    {
+                        EngineLogger.Log("No Engine Config Provided or Read Successfully generating now");
+                        Config = EngineConfiguration.ReadEngineConfig("");
+                        EngineLogger.Log(@$"Generated new engine config at {UserDir}\PowerGL\PowerGL.EngineConfig");
+                    }
+                }
+                else
+                {
+                    string config_file = files.First();
+                    EngineLogger.Log($"Engine config file(s) found total count {files.Count()}: Loaded config {config_file}");
+                    Config = EngineConfiguration.ReadEngineConfig(config_file);
+                }
+                Previous_config = Config;
+                FLAGS[4] = "Engine_Config_Read";
             }
 
             //I really need to clean this up
@@ -245,9 +314,28 @@ namespace HoseRenderer
             PrintFunnyLogo();
 
             WindowOptions options = WindowOptions.Default;
-            options.Size = new Vector2D<int>(1920, 1080);
-            options.Title = "HoseNose.PowerGL";
-            options.Position = new Vector2D<int>(0,30);
+            if (FLAGS[4] != "Engine_Config_Read")
+            {
+                // FALL BACK OPTIONS IN THE EVENT A CONFIG LOADING ERROR HAPPENS
+                options.Size = new Vector2D<int>(1920, 1080);
+                options.Title = "HoseNose.PowerGL";
+                options.Position = new Vector2D<int>(0, 30);
+                options.VSync = true;
+            }
+            else
+            {
+                try
+                {
+                    options.Size = new Vector2D<int>(Config.WindowX, Config.WindowY);
+                    options.Title = Config.WindowTitle;
+                    options.Position = new Vector2D<int>(0, 30);
+                    options.VSync = Config.IsVSyncEnabled;
+                }
+                catch (Exception ex)
+                {
+                    EngineLogger.Log($"//CRITICAL FAILURE// CONFIGURATION IS INVALID EXCEPTION MESSAGE: {ex.Message}{Environment.NewLine}");
+                }
+            }
             //DO NOT TURN VSYNC OFF WITHOUT LOGIC TO WARN THE USER THAT THE ENGINES PHYSICS MIGHT BE A LITTLE WONKY IF ITS DISABLED SINCE A LOT OF PHYSICS ARE CALCULATED ON A FRAME
             //options.VSync = false;
             Console.WriteLine("HoseNose.PowerGL has been loaded");
@@ -258,22 +346,17 @@ namespace HoseRenderer
             //why must techonology not like powershell :( (we are cheating by having powershell just do the control of shapes engine, the shape properties and when this program is launched leaving
             //this to do the rendering calls to OpenGL through Silk.Net)
             Console.WriteLine($"{window.API.API} {window.WindowState}");
-
-            //SharedFileIPC.InitalizeFileIPC();
-            //this is for debugging the rendering engine not showing my shapes :( (Fixed that still leaving all this here for main engine debugging)
-            //Shape[] shape = new Shape[2];
-            //shape[0] = new Shape("Cube", new Vector3(2f, 3f, 3f), 1, 0, 0, null, null, null, null, null, ".\\randompictures\\silk.png", Vector3.Zero,1.0f, new Vector3(0.0f,0.0f,0.0f));
-            //shape[1] = new Shape("Cube", new Vector3(1f, 1f, 0f), 2, 0, 0, null, null, null, null, null, ".\\randompictures\\PDQ_wallpaper.png", new Vector3(0.0f,0.0f,0.0f),2.0f, new Vector3(0.5f,0.0f,0.0f));
-            if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE") {
-                //VERY LIKELY CHANCE WE GET A RACE CONDITION BECAUSE BOTH PROGRAMS ARE SINGLE THREADED FOR ALL THEIR LOGIC BESIDES IN LIBRARIES AND OTHER THINGS SO WE CAN JUST SLEEP THE APPLICATION ONCE
-                //IT STARTS SO POWERSHELL CAN CONSTRUCT THE NAMED PIPE AND AWAIT THE RENDERER TO CONNECT (THIS WORKS CORRECTLY NAMED PIPES HOWER ARE SYNCHORNOUS SO THE NAMED PIPE WILL DEADLOCK THE 
-                //APPLICATION ATTEMPTING TO READ THE BUFFER)
+            if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE")
+            {
+                // We sleep here to give powershell enough time after the program starts to create the named pipe server it could be faster, but im not tempting fate by getting close and closer to a thread lock
                 Thread.Sleep(2000);
                 Pipe = SharedFileIPC.AttachToOrchastratorNamedPipe();
-                PipeThread = new Thread(() => {
+                PipeThread = new Thread(() =>
+                {
                     Thread.CurrentThread.IsBackground = true;
                     while (true)
                     {
+                        //May not be thread safe but fuck it we ball, its just to tell the Pipe client to chill out while the GUI is active
                         while (IsGUICalled)
                         {
                             Thread.Sleep(10);
@@ -284,7 +367,156 @@ namespace HoseRenderer
                 PipeThread.Name = "PS_IPC_THREAD";
                 PipeThread.Start();
             }
-            
+            //In case you'd like to do more actions then what the named pipe can do / want to retrive data out of the engine the HTTP API is the best bet
+            if (Config.IsHTTPAPIEnabled)
+            {
+                string[] ValidMethods;
+                int Port = Config.HTTPPort;
+                if (Config.IsHTTPReadOnly)
+                {
+                    ValidMethods = new string[] { "GET" };
+                }
+                else
+                {
+                    ValidMethods = new string[] { "GET", "POST", "PATCH" };
+                }
+                var netinfo = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+                var IPPortBlob = netinfo.GetActiveTcpListeners();
+                foreach (IPEndPoint point in IPPortBlob)
+                {
+                    if (point.Port == Port)
+                    {
+                        Console.WriteLine($"HTTP Port:{Port} Is already in use using port +1 maybe");
+                        Port++;
+                    }
+                }
+                HttpListener APISERVER = new();
+                APISERVER.Prefixes.Add($"http://localhost:{Port}/api/shapes/");
+                APISERVER.Start();
+                Logger HttpAPILogger = new Logger("HTTPAPI", null);
+                Thread HTTPThread = new Thread(() =>
+                {
+                    Thread.CurrentThread.IsBackground = true;
+                    Thread.CurrentThread.Name = "HTTP_API";
+
+                    while (APISERVER.IsListening)
+                    {
+                        var Client = APISERVER.GetContext();
+                        if (Client != null)
+                        {
+                            //Stuff that is unique per client
+                            var Request = Client.Request;
+                            var Response = Client.Response;
+                            Stream Output = Response.OutputStream;
+
+                            //Check the user agent to log incase the user agent isn't powershell which isn't supported but it still will respond
+                            if (Request.UserAgent.Contains("PowerShell"))
+                            {
+                                Debugger.Log(1, "", $"PowerShell Request detected YIPPE{Environment.NewLine}");
+                            }
+                            else
+                            {
+                                HttpAPILogger.Log($"Non Powershell user agent made the request user agent is {Request.UserAgent}, If this is a web browser it may not behave correctly");
+                            }
+                            HttpObject? requestData = null;
+                            try
+                            {
+                                requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
+                            }
+                            catch
+                            {
+                                requestData = null;
+                            }
+                            if (requestData == null && Request.HttpMethod == HttpMethod.Post.ToString())
+                            {
+                                HttpAPILogger.Log("Incomplete Request Sent");
+                                Response.StatusCode = (int)HttpStatusCode.PartialContent;
+                                var incompletedatamsgbyte = Encoding.UTF8.GetBytes("Incomplete Data to Complete Request");
+                                Response.ContentLength64 = incompletedatamsgbyte.Length;
+                                Output.Write(incompletedatamsgbyte, 0, incompletedatamsgbyte.Length);
+                                Response.Close();
+                            }
+                            else if (Request.HttpMethod == HttpMethod.Get.ToString())
+                            {
+                                if (requestData != null)
+                                {
+                                    Shape RequestedShape = Shapes[requestData.ShapeNumber];
+                                    HttpObject RequestedShapeResponse = requestData.Property switch
+                                    {
+                                        "Position" => new HttpObject(RequestedShape.ShapeNum, "Position", RequestedShape.PosX, RequestedShape.PosY, RequestedShape.PosZ),
+                                        "Size" => new HttpObject(RequestedShape.ShapeNum, "Size", RequestedShape.Size, 0, 0),
+                                        "Stretch" => new HttpObject(RequestedShape.ShapeNum, "Stretch", RequestedShape.StrX, RequestedShape.StrY, RequestedShape.StrZ),
+                                        "Shear" => new HttpObject(RequestedShape.ShapeNum, "Shear", RequestedShape.ShrX, RequestedShape.ShrY, RequestedShape.ShrZ),
+                                        "Restitution" => new HttpObject(RequestedShape.ShapeNum, "Restitution", RequestedShape.Restitution, 0, 0),
+                                        "Momentum" => new HttpObject(RequestedShape.ShapeNum, "Momentum", RequestedShape.MomentumX, RequestedShape.MomentumY, RequestedShape.MomentumZ),
+                                        "Rotation" => new HttpObject(RequestedShape.ShapeNum, "Rotation", RequestedShape.RotX, RequestedShape.RotY, RequestedShape.RotZ),
+                                        _ => new HttpObject(0, "NONE OR INVALID PROPERTY", 0, 0, 0)
+                                    };
+                                    Response.StatusCode = 200;
+                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize<HttpObject>(RequestedShapeResponse)));
+                                    Response.Close();
+                                }
+                                else
+                                {
+                                    //StringBuilder JSON_BUILDER = new StringBuilder();
+                                    //JSON_BUILDER.Append('[');
+                                    //Might thread lock if its trying to render while also trying to serialize it, might need to add a deep clone and synchronization into it and store a copy
+                                    ShapeHttpObjectCollectionEntry[] shapeHttpObjectCollectionEntries = new ShapeHttpObjectCollectionEntry[Shapes.Length];
+                                    int Indexer = 0;
+                                    foreach (Shape shape in Shapes)
+                                    {
+                                        shapeHttpObjectCollectionEntries[Indexer] = new ShapeHttpObjectCollectionEntry(shape);
+                                        Indexer++;
+                                    }
+                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shapeHttpObjectCollectionEntries)));
+                                    Response.StatusCode = 200;
+                                    Response.Close();
+                                }
+                            }
+                            else if (Request.HttpMethod == HttpMethod.Post.ToString() && requestData != null)
+                            {
+                                float? scale = 0;
+                                if (requestData.Property.ToLower() == "scale")
+                                {
+                                    scale = requestData.ValueX;
+                                }
+                                else
+                                {
+                                    scale = null;
+                                }
+                                int modifyStatus = ModifyShapeProperty((int)requestData.ShapeNumber, requestData.Property, requestData.ValueX, requestData.ValueY, requestData.ValueZ, null, null, null, scale);
+                                if (modifyStatus == 0) {
+                                    Response.StatusCode = 200;
+                                    Response.Close();                                
+                                }
+                                else if (modifyStatus == -1)
+                                {
+                                    Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid was presented to the engine"));
+                                    Response.Close();
+                                }
+                                else if (modifyStatus == -2)
+                                {
+                                    Response.StatusCode= (int)HttpStatusCode.InternalServerError;
+                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber}-{requestData.Property} Please look at the log at {HttpAPILogger.Log_Directory}"));
+                                    Response.Close();
+                                }
+                            }
+                            else
+                            {
+                                Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                                string invalidhttpmethodbody = "Invalid HTTP method sent to server";
+                            }
+                        }
+                    }
+                });
+                HTTPThread.Start();
+            }
+
+
+
+
+
             window.Load += OnLoad;
             window.Render += OnRender;
             window.FramebufferResize += OnFramebufferResize;
@@ -294,21 +526,22 @@ namespace HoseRenderer
             {
                 window.Run();
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}, IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
+                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
                 throw new InvalidOperationException("ENGINE HAS CRASHED LOOK AT THE LOG FILE");
             }
             window.Dispose();
         }
-        private static void LoadObjects() {
+        private static void LoadObjects()
+        {
             try
             {
                 Shapes = SharedFileIPC.ReadShapeIPC();
                 Console.WriteLine($"SUCCESS MAYBE OBJECT [0] is {Shapes[0].ShapeName}");
                 EngineLogger.Log($"Loaded Objects successfully shape count is {Shapes.Length}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 EngineLogger.Log($"Load Objects Failed Exception:{ex.Message}");
                 Console.WriteLine("IPC never initialized loading default scene");
@@ -323,7 +556,8 @@ namespace HoseRenderer
             {
                 primaryKeyboard.KeyDown += KeyDown;
             }
-            for (int i = 0; i < input.Mice.Count; i++) {
+            for (int i = 0; i < input.Mice.Count; i++)
+            {
                 input.Mice[i].Cursor.CursorMode = CursorMode.Raw;
                 input.Mice[i].MouseMove += OnMouseMove;
                 input.Mice[i].Scroll += OnMouseWheel;
@@ -332,15 +566,16 @@ namespace HoseRenderer
             {
                 mouse = input.Mice[0];
             }
-            MainRenderer.EngineLogger.Log($"Mouse and keyboards enumerated there are {input.Keyboards.Count} keyboards and {input.Mice.Count} mice, Keyboard1 is {input.Keyboards[0].Name} and mouse1 is {input.Mice[0].Name}");
+            MainRenderer.EngineLogger.Log($"Mouse and keyboards enumerated there are {input.Keyboards.Count} keyboards and {input.Mice.Count} mice");
             Gl = GL.GetApi(window);
             LoadObjects();
             Console.WriteLine($"Shapes array from LOAD_OBJECTS:{Shapes.Length}");
-            guiController = new(Gl,window,input);
+            guiController = new(Gl, window, input);
             Ebo = new BufferObject<uint>(Gl, Indices, BufferTargetARB.ElementArrayBuffer);
             Vbo = new BufferObject<float>(Gl, Vertices, BufferTargetARB.ArrayBuffer);
             VaoCube = new VertexArrayObject<float, uint>(Gl, Vbo, Ebo);
-            if (Shapes.Length == 0 || FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS") {
+            if (Shapes.Length == 0 || FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS")
+            {
                 DebugMessages.PrintDebugMSG("Rending Default Cubes");
 
                 VaoCube.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 8, 0);
@@ -359,7 +594,7 @@ namespace HoseRenderer
                 model = new Model(Gl, $"{Application_Directory}\\Model\\cube.model");
             }
             var size = window.FramebufferSize;
-            Camera = new Camera(new Vector3(-6.0f,0.0f,6.0f), Vector3.UnitX, Vector3.UnitY, (float)size.X / size.Y);
+            Camera = new Camera(new Vector3(-6.0f, 0.0f, 6.0f), Vector3.UnitX, Vector3.UnitY, (float)size.X / size.Y);
             if (Shapes.Length != 0)
             {
                 //shapevertfloats = new();
@@ -368,7 +603,8 @@ namespace HoseRenderer
                     Shapes[i].Glcontext = Gl;
                     Shapes[i].Camera = Camera;
                     Shapes[i].CompileShader();
-                    if (Shapes[i].TexturePath != "" && Shapes[i].TexturePath != null) {
+                    if (Shapes[i].TexturePath != "" && Shapes[i].TexturePath != null)
+                    {
                         string _texturepath = Shapes[i].TexturePath;
                         if (_Name_to_texture_dict.ContainsKey(Shapes[i].TexturePath))
                         {
@@ -379,7 +615,7 @@ namespace HoseRenderer
                             Shapes[i].CompileTexture();
                             var _compiled_texture_path = Shapes[i].TexturePath;
                             var _compiled_texture_texture = Shapes[i].CompiledTexture;
-                            _Name_to_texture_dict.Add(_compiled_texture_path,_compiled_texture_texture);
+                            _Name_to_texture_dict.Add(_compiled_texture_path, _compiled_texture_texture);
                         }
                     }
                     if (Shapes[i].IsModel)
@@ -400,14 +636,16 @@ namespace HoseRenderer
                         Shapes[i].Debug = 1;
                     }
                 }
-                for (uint i = 0; i < Shapes.Length; i++) {
-                    if (FLAGS[1]=="" || FLAGS[1] == null) {
+                for (uint i = 0; i < Shapes.Length; i++)
+                {
+                    if (FLAGS[1] == "" || FLAGS[1] == null)
+                    {
                         VaoCube.VertexAttributePointer(i, 3, VertexAttribPointerType.Float, 8, 3 * (int)i);
                         if (FLAGS[2] == "DEBUG")
                         {
                             DebugMessages.PrintDebugMSG("Using the RAW vertexattribpointer if this is set to render the default cubes that is bad");
                         }
-                        
+
                     }
                     else
                     {
@@ -419,7 +657,8 @@ namespace HoseRenderer
                     }
                 }
             }
-            if (FLAGS[2] == "DEBUG") {
+            if (FLAGS[2] == "DEBUG")
+            {
                 foreach (var _texture_name_mapper in _Name_to_texture_dict)
                 {
                     Console.WriteLine(_texture_name_mapper.Key);
@@ -428,15 +667,16 @@ namespace HoseRenderer
 
             FPS_Thread = new Thread(() =>
             {
-                
-                while (true) {
+
+                while (true)
+                {
                     Thread.CurrentThread.Name = "FPS_THREAD";
                     Thread.CurrentThread.IsBackground = true;
                     uint _frame_counter_start = (uint)_Frame_counter;
                     Thread.Sleep(1000);
                     uint _frame_counter_end = (uint)_Frame_counter;
                     FPS = _frame_counter_end - _frame_counter_start;
-                    Debugger.Log(1,"THREADING",$"FPS::{FPS}{Environment.NewLine}");
+                    Debugger.Log(1, "THREADING", $"FPS::{FPS}{Environment.NewLine}");
                 }
             });
             FPS_Thread.Start();
@@ -444,52 +684,6 @@ namespace HoseRenderer
 
             GlobalShapeCount = Shapes.Length;
 
-            //this is probably get removed since multiple threads cannot access the OpenGL context without it getting angry
-            if (FLAGS[4] == "MULTITHREADED_RENDERER") {
-                int _num_renderer_threads;
-                int _num_Shapes = Shapes.Length;
-                int _last_thread_shaperange;
-                if (_num_Shapes > 0)
-                {
-                    if (_num_Shapes % 1000 == 0)
-                    {
-                        _num_renderer_threads = _num_Shapes / 1000;
-                        _last_thread_shaperange = 0;
-                    }
-                    else
-                    {
-                        _num_renderer_threads = ((int)(_num_Shapes / 1000)) + 1;
-                        _last_thread_shaperange = _num_Shapes % 1000;
-                    }
-                    ThreadPoolRenderer = new Thread[_num_renderer_threads];
-                    for (int i = 0; i < _num_renderer_threads; i++)
-                    {
-                        int _min_shape_num = 1000 * i;
-                        int _max_shape_num;
-                        if (_last_thread_shaperange > 0) {
-                            _max_shape_num = _last_thread_shaperange;
-                        }
-                        else
-                        {
-                            _max_shape_num = ((1000 * i) - 1) + 1000;
-                        }
-                        //what in the world is this abominiation
-                        ThreadPoolRenderer[i] = new Thread(() =>
-                        {
-                            Thread.CurrentThread.IsBackground = true;
-                            string _threadfullname = $"RENDERER_THREAD::{i}::{_min_shape_num}->{_max_shape_num}";
-                            Thread.CurrentThread.Name = _threadfullname;
-                            int _internal_threaded_min = _min_shape_num;
-                            int _internal_threaded_max = _max_shape_num;
-                            while (true) {
-                                for (int i = _internal_threaded_min; i < _internal_threaded_max; i++) {
-                                    Shapes[i].Render();
-                                }
-                            }
-                        });
-                    }
-                }
-            }
         }
 
         private static unsafe void OnRender(double dt)
@@ -497,14 +691,15 @@ namespace HoseRenderer
             guiController.Update((float)dt);
             _Frame_counter++;
             Gl.Enable(EnableCap.DepthTest);
-            if (IsGUICalled) {
+            if (IsGUICalled)
+            {
                 Gl.ClearColor(Color.FromArgb(255, (int)(.45f * 255), (int)(.55f * 255), (int)(.60f * 255)));
             }
             else
             {
                 Gl.ClearColor(Color.FromArgb(255, (int)(.01f * 255), (int)(.01f * 255), (int)(.01f * 255)));
             }
-            Gl.Clear((uint) (ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
+            Gl.Clear((uint)(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
             VaoCube.Bind();
             if (FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS" || Shapes.Length == 0)
             {
@@ -516,18 +711,21 @@ namespace HoseRenderer
             }
             if (FLAGS[3] == "PHYSICS")
             {
-                if (!IsGUICalled) {
+                if (!IsGUICalled)
+                {
                     ComputeWhetherOrNotThereIsAShapeInsideAShapeThatSupportsCollions(Shapes);
                     for (int i = 0; i < Shapes.Length; i++)
                     {
-                        if (Shapes[i].IsEffectedByGravity) {
+                        if (Shapes[i].IsEffectedByGravity)
+                        {
                             ApplyGravity(Shapes[i], dt);
                         }
                     }
                 }
             }
             //guiController.Update((float)dt);
-            if (_Last_frametime_GUI_change == _Frame_counter) {
+            if (_Last_frametime_GUI_change == _Frame_counter)
+            {
                 Debugger.Log(4, "INTERNAL_GUI", $"GUI_TYPE{_Gui_Frame_state} {Environment.NewLine}");
             }
             if (_Gui_Frame_state == 1)
@@ -547,10 +745,11 @@ namespace HoseRenderer
 
 
 
-            if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE") {
+            if (FLAGS[0] == "IPC_NAMED_PIPE_ENABLE")
+            {
                 if (_Pipe_THREAD_DATA == "DEBUG:PIPETALKED")
                 {
-                    Debugger.Log(1,"IPC",$"PIPE COMMUNION SUCCESSFUL{Environment.NewLine}");
+                    Debugger.Log(1, "IPC", $"PIPE COMMUNION SUCCESSFUL{Environment.NewLine}");
                     _Pipe_THREAD_DATA = "";
                 }
                 string Pipecontents = _Pipe_THREAD_DATA;
@@ -570,38 +769,20 @@ namespace HoseRenderer
                         {
                             throw new Exception($"DISPATCH_TARGETNUMBER {DISPATCH_TARGETNUMBER} IS OVER INDEXING THE SHAPES ARRAY THATS BAD GOODBYE");
                         }
-                    }catch(Exception e){
+                    }
+                    catch (Exception e)
+                    {
                         DebugMessages.PrintDebugMSG($"Error read pipe contents with exception {e.StackTrace}");
-                        Debugger.Log(1,"IPC_PIPE","Chances are you just sent a string that doesn't contain a number and angered the .parse");
+                        Debugger.Log(1, "IPC_PIPE", "Chances are you just sent a string that doesn't contain a number and angered the .parse");
                     }
                     Pipecontents = "";
-                    _Pipe_THREAD_DATA = ""; 
+                    _Pipe_THREAD_DATA = "";
                 }
-                
+
             }
-            if (FLAGS[4] != "MULTITHREADED_RENDERER")
+            for (int i = 0; i < Shapes.Length; i++)
             {
-                for (int i = 0; i < Shapes.Length; i++)
-                {
-                    Shapes[i].Render();
-                }
-            }
-            else
-            {
-                for (int i = 0; i < ThreadPoolRenderer.Length; i++)
-                {
-                    //prepare to have to make a global var that blocks execution from main thread to sub thread in the instance that join cannot escape a while(true) loop
-                    var cur_thread = ThreadPoolRenderer[i];
-                    if (cur_thread.ThreadState == System.Threading.ThreadState.Unstarted)
-                    {
-                        cur_thread.Start();
-                    }
-                    if (cur_thread.ThreadState == System.Threading.ThreadState.WaitSleepJoin)
-                    {
-                        cur_thread.Interrupt();
-                    }
-                    cur_thread.Join();
-                }
+                Shapes[i].Render();
             }
         }
         private static unsafe void RenderLitCube()
@@ -636,7 +817,7 @@ namespace HoseRenderer
             }
             else
             {
-                translationy += (0.1f / ( 2 * scale));
+                translationy += (0.1f / (2 * scale));
             }
             if (scale > 50f)
             {
@@ -646,9 +827,10 @@ namespace HoseRenderer
             {
                 scale += 0.1f;
             }
-            rotationz += (1f / ( 2 * scale));
+            rotationz += (1f / (2 * scale));
         }
-        private static unsafe void RenderLampCube() {
+        private static unsafe void RenderLampCube()
+        {
             LampShader.use();
             var lampMatrix = Matrix4x4.Identity;
             lampMatrix *= Matrix4x4.CreateScale(0.2f);
@@ -679,12 +861,12 @@ namespace HoseRenderer
                 mesh.Bind();
                 shader.use();
                 texture.Bind();
-                shader.SetUniform("uTexture0",0);
+                shader.SetUniform("uTexture0", 0);
                 shader.SetUniform("uModel", ModelMatrix);
-                shader.SetUniform("uView",Camera.GetViewMatrix());
-                shader.SetUniform("uProjection",Camera.GetProjectionMatrix());
+                shader.SetUniform("uView", Camera.GetViewMatrix());
+                shader.SetUniform("uProjection", Camera.GetProjectionMatrix());
 
-                Gl.DrawArrays(PrimitiveType.Triangles,0,(uint)mesh.Verticies.Length);
+                Gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)mesh.Verticies.Length);
             }
         }
         private static void OnFramebufferResize(Vector2D<int> newSize)
@@ -703,7 +885,8 @@ namespace HoseRenderer
                     //WHY DOES MAKING THE SPEED HIGHER MAKE IT MOVE SLOWER ????????? AND WHY DOES DIVIDING IT MAKE IT FASTER???????
                     Camera.Position += moveSpeed / sprintspeed * Camera.Front;
                 }
-                else {
+                else
+                {
                     Camera.Position += moveSpeed * Camera.Front;
                 }
             }
@@ -758,11 +941,11 @@ namespace HoseRenderer
             }
             if (primaryKeyboard.IsKeyPressed(Key.F))
             {
-                Shapes[_player_1_controllerObject].PosZ += _player_speed;
+                Shapes[_player_1_controllerObject].PosZ -= _player_speed;
             }
             if (primaryKeyboard.IsKeyPressed(Key.H))
             {
-                Shapes[_player_1_controllerObject].PosZ -= _player_speed;
+                Shapes[_player_1_controllerObject].PosZ += _player_speed;
             }
             if (primaryKeyboard.IsKeyPressed(Key.R))
             {
@@ -775,7 +958,7 @@ namespace HoseRenderer
         }
         private static unsafe void OnMouseMove(IMouse mouse, Vector2 postition)
         {
-            
+
             var lookSensitivity = 0.1f;
             if (LastMousePosition == default) { LastMousePosition = postition; }
             else
@@ -788,21 +971,23 @@ namespace HoseRenderer
         }
         private static unsafe void OnMouseWheel(IMouse mouse, ScrollWheel scrollWheel)
         {
-            if (!IsGUICalled) {
+            if (!IsGUICalled)
+            {
                 Camera.ModifyZoom(scrollWheel.Y);
             }
         }
         private static void OnClose()
         {
-            if (Shapes.Length == 0) {
+            if (Shapes.Length == 0)
+            {
                 Vbo.Dispose();
-                
+
                 VaoCube.Dispose();
                 LightingShader.Dispose();
                 model.Dispose();
                 shader.Dispose();
-          
-               texture.Dispose();
+
+                texture.Dispose();
             }
             else
             {
@@ -819,7 +1004,8 @@ namespace HoseRenderer
         }
         private static void ComputeWhetherOrNotThereIsAShapeInsideAShapeThatSupportsCollions(Shape[] Shapes)
         {
-            for (int i = 0; i < Shapes.Length; i++) {
+            for (int i = 0; i < Shapes.Length; i++)
+            {
                 for (int j = 0; j < Shapes.Length; j++)
                 {
                     if (i != j && Shapes[i].HasCollision == 1 && Shapes[j].HasCollision == 1)
@@ -828,8 +1014,8 @@ namespace HoseRenderer
                         //attempt 3 works, had a little help from copilot since i wasn't finding any sort of ideas on google it uses AABB (axis-alligned Bounding Boxes)
                         if (Shapes[i].BoundingBox.Intersects(Shapes[j].BoundingBox) && _Frame_counter > 10)
                         {
-                            Debugger.Log(1,"",$"{_Frame_counter}::Shape I:{Shapes[i].ShapeNum} collides with Shape:{Shapes[j].ShapeNum} {Environment.NewLine}");
-                            if (Shapes[i].BoundingBox.IntersectsX(Shapes[j].BoundingBox)) 
+                            Debugger.Log(1, "", $"{_Frame_counter}::Shape I:{Shapes[i].ShapeNum} collides with Shape:{Shapes[j].ShapeNum} {Environment.NewLine}");
+                            if (Shapes[i].BoundingBox.IntersectsX(Shapes[j].BoundingBox))
                             {
                                 InitiateBoing(Shapes[i], "X");
                                 InitiateBoing(Shapes[j], "X");
@@ -844,11 +1030,11 @@ namespace HoseRenderer
                                 InitiateBoing(Shapes[i], "Z");
                                 InitiateBoing(Shapes[j], "Z");
                             }
-                            
+
                         }
                         else
                         {
-                            Debugger.Log(2,"",$"{_Frame_counter}::Shape I:{Shapes[i].ShapeNum} doesn't collide with Shape{Shapes[j].ShapeNum} {Environment.NewLine}");
+                            Debugger.Log(2, "", $"{_Frame_counter}::Shape I:{Shapes[i].ShapeNum} doesn't collide with Shape{Shapes[j].ShapeNum} {Environment.NewLine}");
                         }
                     }
                 }
@@ -868,12 +1054,13 @@ namespace HoseRenderer
             var _frame_count_last_boing = Shape.FrameTimeOfLastBoing;
             if (_Frame_counter >= _frame_count_last_boing + 5 || _Frame_counter == _frame_count_last_boing)
             {
-                if (Shape.Player_moveable != 1) {
+                if (Shape.Player_moveable != 1)
+                {
                     var _Old_momentum = Shape.Momentum;
                     Vector3 _Computed_new_momentum;
                     if (Shape.ClampedToFloor == 0)
                     {
-                        _Computed_new_momentum = (Shape.Momentum * Shape.BoingFactor) * -1;
+                        _Computed_new_momentum = (Shape.Momentum * Shape.Restitution) * -1;
                     }
                     else
                     {
@@ -903,7 +1090,8 @@ namespace HoseRenderer
         }
         private static void ApplyGravity(Shape shape, double dt)
         {
-            if (shape.ClampedToFloor == 0) {
+            if (shape.ClampedToFloor == 0)
+            {
                 var _Y_speed_after_gravity = shape.Momentum.Y - (((shape.Gravity / 10f) * shape.Mass * dt) * 0.1f);
                 if (Math.Abs(_Y_speed_after_gravity) <= (shape.TerminalVelocity / 4f) && _Frame_counter >= shape.FrameTimeOfLastBoing + 5)
                 {
@@ -936,7 +1124,8 @@ namespace HoseRenderer
             ImGui.SetWindowFontScale(1.5f);
             ImGui.Text($"<{ImGui.GetMousePos().X}-{ImGui.GetMousePos().Y}>");
             ImGui.EndMenu();
-            if(ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN,ImGuiInputTextFlags.EnterReturnsTrue)){
+            if (ImGui.InputText("CMD", ref CMD_PROC, PROC_LEN, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
                 GUI_CNS_TEXT += $"{ConsoleCommandHandler.ExecutePGLCommand(CMD_PROC)}{Environment.NewLine}";
                 CMD_PROC = "";
             }
@@ -944,7 +1133,7 @@ namespace HoseRenderer
             Thread.Sleep(1);
             if (CMD_PROC != "")
             {
-                Debugger.Log(1,"",$"{CMD_PROC}{Environment.NewLine}");
+                Debugger.Log(1, "", $"{CMD_PROC}{Environment.NewLine}");
             }
         }
         /// <summary>
@@ -955,7 +1144,8 @@ namespace HoseRenderer
         {
             int cur_len = Shapes.Length;
             Shape[] new_array = new Shape[cur_len + 1];
-            for (int i = 0; i < Shapes.Length; i++) {
+            for (int i = 0; i < Shapes.Length; i++)
+            {
                 new_array[i] = Shapes[i];
             }
             if (new_array.Length > Shapes.Length + 2)
@@ -972,7 +1162,7 @@ namespace HoseRenderer
         /// <returns>
         /// -1 if theres no matches for property, -2 if there is a subfunction error, 0 for success.
         /// </returns>
-        public static int ModifyShapeProperty(int ShapeNumber,string Property,float X,float Y,float Z,string? shader ,string? frag,string? texture, float? Size)
+        public static int ModifyShapeProperty(int ShapeNumber, string Property, float X, float Y, float Z, string? shader, string? frag, string? texture, float? Size)
         {//TODO me in the future, In our infinite design we forgor to include a string parameter for the texture path lmaoooo
             if (ShapeNumber > Shapes.Length - 1 && Property != "NEW")
             {
@@ -993,18 +1183,19 @@ namespace HoseRenderer
                     {
                         _int_text = texture;
                     }
-                    Shape new_shape = new Shape("cube", new Vector3(X,Y,Z), (uint)ShapeNumber, 0, 0, shader, frag, _int_text, Vector3.Zero, 1f, Vector3.One, Vector3.Zero, 0, Vector3.Zero, 0);
+                    Shape new_shape = new Shape("cube", new Vector3(X, Y, Z), (uint)ShapeNumber, 0, 0, shader, frag, _int_text, Vector3.Zero, 1f, Vector3.One, Vector3.Zero, 0, Vector3.Zero, 0);
                     new_shape.Glcontext = Gl;
                     new_shape.Camera = Camera;
                     //TODO make this lookup the textures to save on compute by using already compiled textures to stop lower end stuttering ( we are not going to end up like unreal engine :|> )
                     new_shape.CompileShader();
-                    if (_Name_to_texture_dict.ContainsKey(_int_text)) {
+                    if (_Name_to_texture_dict.ContainsKey(_int_text))
+                    {
                         new_shape.CompiledTexture = _Name_to_texture_dict[_int_text];
                     }
                     else
                     {
                         new_shape.CompileTexture();
-                        _Name_to_texture_dict.Add(_int_text,new_shape.CompiledTexture);
+                        _Name_to_texture_dict.Add(_int_text, new_shape.CompiledTexture);
                     }
                     ExpandShapeArray();
                     Shapes[^1] = new_shape;
@@ -1025,7 +1216,7 @@ namespace HoseRenderer
                     Shapes[ShapeNumber].PosZ = Z;
                     return 0;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     EngineLogger.Log($"//EXCEPTION// Modifting Postions EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     return -2;
@@ -1040,7 +1231,7 @@ namespace HoseRenderer
                     Shapes[ShapeNumber].RotZ = Z;
                     return 0;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     EngineLogger.Log($"//EXCEPTION// Modifying Positions EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     return -2;
@@ -1050,7 +1241,8 @@ namespace HoseRenderer
             {
                 try
                 {
-                    if (Size != null) { 
+                    if (Size != null)
+                    {
                         Shapes[ShapeNumber].Size = (float)Size;
                         return 0;
                     }
@@ -1059,7 +1251,7 @@ namespace HoseRenderer
                         throw new Exception("Size Cannot be null");
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     EngineLogger.Log($"//EXCEPTION// Modifying Scale EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     return -2;
@@ -1074,14 +1266,52 @@ namespace HoseRenderer
                     Shapes[ShapeNumber].StrZ = Z;
                     return 0;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     EngineLogger.Log($"//EXCEPTION// Modifying Strech EXCEPTION:{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     return -2;
                 }
             }
-            
-            return -1;    
+            if (Property == "Shear")
+            {
+                Shapes[ShapeNumber].ShrX = X;
+                Shapes[ShapeNumber].ShrY = Y;
+                Shapes[ShapeNumber].ShrZ = Z; 
+                return 0;
+            }
+            return -1;
+        }
+        public static void ApplyConfig()
+        {
+            //we just double check the config is not equal to what it currently is to save on things being executed
+            if (!Config.Equals(Previous_config))
+            {
+                try
+                {
+                    Gl.Viewport(new Vector2D<int>(Config.WindowX, Config.WindowY));
+                    Camera.AspectRatio = (float)Config.WindowX / Config.WindowY;
+                    window.Title = Config.WindowTitle;
+                    window.Size = new Vector2D<int>(Config.WindowX, Config.WindowY);
+                    window.VSync = Config.IsVSyncEnabled;
+                    Previous_config = Config;
+                }
+                catch (Exception ex)
+                {
+                    EngineLogger.Log($"//EXCEPTION// Failled to apply config change exception message {ex.Message}{Environment.NewLine} Config Rolled back to previous version");
+                    Config = Previous_config;
+                }
+            }
+        }
+        public static void RevertConfig()
+        {
+            Config = Previous_config;
+        }
+        public static void UpdateRunningConfig(int NumberOfUpdates, string[] Properties, string[] Values)
+        {
+            for (int i = 0; i < Properties.Length; i++)
+            {
+                Config.UpdateConfiguration(Properties[i], Values[i]);
+            }
         }
     }
 }

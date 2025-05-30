@@ -7,8 +7,8 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <AssemblyVersion>0.0.1.0</AssemblyVersion>
-    <FileVersion>0.0.1.0</FileVersion>
+    <AssemblyVersion>0.0.2.0</AssemblyVersion>
+    <FileVersion>0.0.2.0</FileVersion>
     <ApplicationIcon>PowerGLlogo.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -25,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ImGui.NET" Version="1.90.8.1" />
     <PackageReference Include="Silk.NET" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Assimp" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Maths" Version="2.22.0" />
@@ -33,7 +32,7 @@
     <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
     <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.22.0" />
     <PackageReference Include="Silk.NET.Windowing.Glfw" Version="2.22.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
     <PackageReference Include="System.Management.Automation" Version="7.4.6" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
@@ -58,6 +57,9 @@
     <None Update="Model\Sphere.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="PowerGL.EngineConfig">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="PowerGL\PowerGL.psd1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -68,6 +70,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="PowerGL\public\Initalize-PowerGL.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="PowerGL\public\Invoke-PowerGLApiRequest.ps1">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="PowerGL\public\Move-PowerGLShape.ps1">
@@ -104,6 +109,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Randompictures\silkSpecular.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Randompictures\Stone.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Randompictures\White.png">
