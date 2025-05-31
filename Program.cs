@@ -20,7 +20,7 @@ using System.Text.Json;
 namespace HoseRenderer
 {
     /// <summary>
-    /// This is the cursed C# powered PowerShell OpenGL rendering engine because making something practical is no fun anyways
+    /// This is the cursed C# powered PowerShell OpenGL (+Maybe Vulkan) rendering engine because making something practical is no fun anyways
     /// </summary>
     public class MainRenderer
     {
@@ -50,19 +50,6 @@ namespace HoseRenderer
         private static BufferObject<float> Vbo;
         private static BufferObject<uint> Ebo;
 
-        private static BufferObject<float> shapevbo;
-        private static VertexArrayObject<float, uint> shapeVAO;
-        private static Shader shader;
-        private static Shader LightingShader;
-        private static Shader LampShader;
-        private static Vector3 LampPosition = new Vector3(1.2f, 1.0f, 2.0f);
-
-        private static Texture DiffuseMap;
-        private static Texture SpecularMap;
-        private static Texture texture;
-
-        private static Model model;
-        private static Vector3 ModelPosition = new Vector3(2.0f, 1.0f, 3.0f);
 
         private static Camera Camera;
 
@@ -71,10 +58,6 @@ namespace HoseRenderer
         private static DateTime StartTime;
 
         private static PowerGLPipe Pipe;
-        //debugging shape movements before attempting to complete the named pipe communion 
-        private static float translationy = 1.0f;
-        private static float rotationz = 1.0f;
-        private static float scale = 1.0f;
 
         private static string[] FLAGS = new string[10];
 
@@ -132,57 +115,6 @@ namespace HoseRenderer
 
 
 #pragma warning restore CS8618 
-        private static readonly float[] Vertices =
-        {
-            //X    Y      Z       Normals             U     V
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,
-
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
-
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f
-        };
-
-        private static readonly uint[] Indices =
-        {
-            0, 1, 3,
-            1, 2, 3
-        };
         /// <summary>
         /// thanks VS I totally need a summary of the Main function Who doesn't know what this does and programs C# ???????
         /// </summary>
@@ -571,28 +503,6 @@ namespace HoseRenderer
             LoadObjects();
             Console.WriteLine($"Shapes array from LOAD_OBJECTS:{Shapes.Length}");
             guiController = new(Gl, window, input);
-            Ebo = new BufferObject<uint>(Gl, Indices, BufferTargetARB.ElementArrayBuffer);
-            Vbo = new BufferObject<float>(Gl, Vertices, BufferTargetARB.ArrayBuffer);
-            VaoCube = new VertexArrayObject<float, uint>(Gl, Vbo, Ebo);
-            if (Shapes.Length == 0 || FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS")
-            {
-                DebugMessages.PrintDebugMSG("Rending Default Cubes");
-
-                VaoCube.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 8, 0);
-                VaoCube.VertexAttributePointer(1, 3, VertexAttribPointerType.Float, 8, 3);
-                VaoCube.VertexAttributePointer(2, 2, VertexAttribPointerType.Float, 8, 6);
-
-                LightingShader = new Shader(Gl, $"{Application_Directory}\\Shaders\\shader.vert", $"{Application_Directory}\\Shaders\\lighting.frag");
-
-                LampShader = new Shader(Gl, $"{Application_Directory}\\Shaders\\shader.vert", $"{Application_Directory}\\Shaders\\shader.frag");
-
-                DiffuseMap = new Texture(Gl, $"{Application_Directory}\\randompictures\\silkBoxed.png");
-                SpecularMap = new Texture(Gl, $"{Application_Directory}\\randompictures\\silkSpecular.png");
-
-                shader = new Shader(Gl, $"{Application_Directory}\\Shaders\\Model.vert", $"{Application_Directory}\\Shaders\\Model.frag");
-                texture = new Texture(Gl, $"{Application_Directory}\\Randompictures\\silk.png");
-                model = new Model(Gl, $"{Application_Directory}\\Model\\cube.model");
-            }
             var size = window.FramebufferSize;
             Camera = new Camera(new Vector3(-6.0f, 0.0f, 6.0f), Vector3.UnitX, Vector3.UnitY, (float)size.X / size.Y);
             if (Shapes.Length != 0)
@@ -634,26 +544,6 @@ namespace HoseRenderer
                     if (FLAGS[2] == "DEBUG")
                     {
                         Shapes[i].Debug = 1;
-                    }
-                }
-                for (uint i = 0; i < Shapes.Length; i++)
-                {
-                    if (FLAGS[1] == "" || FLAGS[1] == null)
-                    {
-                        VaoCube.VertexAttributePointer(i, 3, VertexAttribPointerType.Float, 8, 3 * (int)i);
-                        if (FLAGS[2] == "DEBUG")
-                        {
-                            DebugMessages.PrintDebugMSG("Using the RAW vertexattribpointer if this is set to render the default cubes that is bad");
-                        }
-
-                    }
-                    else
-                    {
-                        VaoCube.VertexAttributePointer((i + 3), 3, VertexAttribPointerType.Float, 8, 3 * (int)(i + 3));
-                        if (FLAGS[2] == "DEBUG")
-                        {
-                            DebugMessages.PrintDebugMSG($"Using the vertextattribpointer in the context of rendering default cubes. I offset for math is {i + 3}");
-                        }
                     }
                 }
             }
@@ -700,15 +590,6 @@ namespace HoseRenderer
                 Gl.ClearColor(Color.FromArgb(255, (int)(.01f * 255), (int)(.01f * 255), (int)(.01f * 255)));
             }
             Gl.Clear((uint)(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
-            VaoCube.Bind();
-            if (FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS" || Shapes.Length == 0)
-            {
-                RenderLitCube();
-
-                RenderLampCube();
-
-                RenderModel();
-            }
             if (FLAGS[3] == "PHYSICS")
             {
                 if (!IsGUICalled)
@@ -783,90 +664,6 @@ namespace HoseRenderer
             for (int i = 0; i < Shapes.Length; i++)
             {
                 Shapes[i].Render();
-            }
-        }
-        private static unsafe void RenderLitCube()
-        {
-            LightingShader.use();
-            DiffuseMap.Bind(TextureUnit.Texture0);
-            SpecularMap.Bind(TextureUnit.Texture1);
-            var megamatix = Matrix4x4.Identity;
-            megamatix *= Matrix4x4.CreateRotationY(MathHelper.DegreesToRadians(25f));
-            megamatix *= Matrix4x4.CreateTranslation(new Vector3(1.0f, translationy, 1.0f));
-            megamatix *= Matrix4x4.CreateRotationZ(MathHelper.DegreesToRadians(rotationz));
-            megamatix *= Matrix4x4.CreateScale(scale);
-            LightingShader.SetUniform("uModel", megamatix);
-            LightingShader.SetUniform("uView", Camera.GetViewMatrix());
-            LightingShader.SetUniform("uProjection", Camera.GetProjectionMatrix());
-            LightingShader.SetUniform("material.diffuse", 0);
-            LightingShader.SetUniform("material.specular", 1);
-            LightingShader.SetUniform("material.shininess", 32.0f);
-            LightingShader.SetUniform("viewPos", Camera.Position);
-
-            var diffuseColor = new Vector3(0.5f);
-            var ambientColor = diffuseColor * new Vector3(0.2f);
-
-            LightingShader.SetUniform("light.ambient", ambientColor);
-            LightingShader.SetUniform("light.diffuse", diffuseColor);
-            LightingShader.SetUniform("light.specular", new Vector3(1.0f, 1.0f, 1.0f));
-            LightingShader.SetUniform("light.position", LampPosition);
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
-            if (translationy > 10f)
-            {
-                translationy = 0f;
-            }
-            else
-            {
-                translationy += (0.1f / (2 * scale));
-            }
-            if (scale > 50f)
-            {
-                scale = 1f;
-            }
-            else
-            {
-                scale += 0.1f;
-            }
-            rotationz += (1f / (2 * scale));
-        }
-        private static unsafe void RenderLampCube()
-        {
-            LampShader.use();
-            var lampMatrix = Matrix4x4.Identity;
-            lampMatrix *= Matrix4x4.CreateScale(0.2f);
-            lampMatrix *= Matrix4x4.CreateTranslation(LampPosition);
-
-            LampShader.SetUniform("uModel", lampMatrix);
-            LampShader.SetUniform("uView", Camera.GetViewMatrix());
-            LampShader.SetUniform("uProjection", Camera.GetProjectionMatrix());
-
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
-        }
-        private static unsafe void RenderModel()
-        {
-            texture.Bind();
-            shader.use();
-            shader.SetUniform("uTexture0", 3);
-
-            var difference = (float)(window.Time * 100);
-
-            var size = window.FramebufferSize;
-
-            var ModelMatrix = Matrix4x4.Identity;
-            ModelMatrix *= Matrix4x4.CreateScale(0.2f);
-            ModelMatrix *= Matrix4x4.CreateTranslation(ModelPosition);
-
-            foreach (var mesh in model.Meshes)
-            {
-                mesh.Bind();
-                shader.use();
-                texture.Bind();
-                shader.SetUniform("uTexture0", 0);
-                shader.SetUniform("uModel", ModelMatrix);
-                shader.SetUniform("uView", Camera.GetViewMatrix());
-                shader.SetUniform("uProjection", Camera.GetProjectionMatrix());
-
-                Gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)mesh.Verticies.Length);
             }
         }
         private static void OnFramebufferResize(Vector2D<int> newSize)
@@ -978,22 +775,7 @@ namespace HoseRenderer
         }
         private static void OnClose()
         {
-            if (Shapes.Length == 0)
-            {
-                Vbo.Dispose();
-
-                VaoCube.Dispose();
-                LightingShader.Dispose();
-                model.Dispose();
-                shader.Dispose();
-
-                texture.Dispose();
-            }
-            else
-            {
-                VaoCube.Dispose();
-            }
-            Ebo.Dispose();
+            EngineLogger.Log("Engine Closing because ESCAPE was pressed BYE BYE");
         }
         private static void KeyDown(IKeyboard arg1, Key arg2, int arg3)
         {

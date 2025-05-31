@@ -8,6 +8,11 @@
 PowerGL is VERY alpha, so very buggy and prone to quirks. Im a sysadmin by day so I can only work on this after work when I get time to so development is slow.
 
 ***
+# Important Changes
+## Models
+Alpha 4+ has had old code removed, one of them was the built in native cube support. It had been causing .model files to not render correctly. To correct this it has been removed and because of that you must specify the .model file you'd like to use. It defaults to a sphere otherwise. If you need to make a model I suggest you look in the Model folder and maybe learn blender to make your own.
+
+***
 # About
 ### What is PowerGL
 PowerGL is a PowerShell module/C# program that allows someone to use powershell to leverage technology like OpenGL to render 3D enviroments with powershell acting as a controller. It is 10% pure powershell and 90% C#, this is because powershell doesn't work with the Silk.Net libraries to make the window. Powershell is used as the control plane of the rendering engine (C# side) so that the engine itself can remain slim to do what it does better.
