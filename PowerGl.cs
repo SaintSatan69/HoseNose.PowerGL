@@ -83,7 +83,7 @@ namespace HoseRenderer
             /// [Model] Ignored by the json serializer, it holds the Model object containing the compiled model and its submeshes
             /// </summary>
             [JsonIgnore]
-            public Model? Model { get; private set; }
+            public Model? Model { get; set; }
             /// <summary>
             /// [uint] the number of this specific shape VERY important, the program uses this number to know which of the many shapes to modify
             /// </summary>

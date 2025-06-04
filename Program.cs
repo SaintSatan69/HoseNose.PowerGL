@@ -63,6 +63,7 @@ namespace HoseRenderer
 
 
         private static Dictionary<string, Texture> _Name_to_texture_dict = new();
+        private static Dictionary<string, Model> _Compiled_Models = new();
 
         private static int _Frame_counter = 0;
 
@@ -523,7 +524,16 @@ namespace HoseRenderer
                     }
                     if (Shapes[i].IsModel)
                     {
-                        Shapes[i].CompileModelMesh();
+                        //TODO Add List of compiled modles and like textures attempt to reuse already made models and in the future do the same for shaders
+                        if (_Compiled_Models.ContainsKey(Shapes[i].ModelPath))
+                        {
+                            Shapes[i].Model = _Compiled_Models[Shapes[i].ModelPath];
+                        }
+                        else
+                        {
+                            Shapes[i].CompileModelMesh();
+                            _Compiled_Models.Add(Shapes[i].ModelPath, Shapes[i].Model);
+                        }
                     }
                     if (Shapes[i].Player_moveable == 1 && Shapes[i].Player_scheme == 1)
                     {
