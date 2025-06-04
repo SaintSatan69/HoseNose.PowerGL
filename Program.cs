@@ -121,6 +121,7 @@ namespace HoseRenderer
         /// <param name="args"></param>
         public static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += HandleEngineCrash;
             string argstring = "";
             for (int a = 0; a < args.Length; a++)
             {
@@ -454,15 +455,7 @@ namespace HoseRenderer
             window.FramebufferResize += OnFramebufferResize;
             window.Update += OnUpdate;
             window.Closing += OnClose;
-            try
-            {
-                window.Run();
-            }
-            catch (Exception ex)
-            {
-                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
-                throw new InvalidOperationException("ENGINE HAS CRASHED LOOK AT THE LOG FILE");
-            }
+            window.Run();
             window.Dispose();
         }
         private static void LoadObjects()
@@ -1094,6 +1087,14 @@ namespace HoseRenderer
             {
                 Config.UpdateConfiguration(Properties[i], Values[i]);
             }
+        }
+
+        public static void HandleEngineCrash(object sendder, UnhandledExceptionEventArgs crashevents)
+        {
+            Exception exception = crashevents.ExceptionObject as Exception ?? new Exception("ENGINE CRASH MEGA BAD"); 
+            Console.WriteLine($"ENGINE CRASH {exception.Message}");
+            EngineLogger.Log($"//CRITICAL FAILURE// CONFIGURATION IS INVALID EXCEPTION MESSAGE: {exception.Message}{Environment.NewLine} STACK TRACE FOR BUG REPORT {exception.StackTrace}");
+            Console.ReadLine();
         }
     }
 }

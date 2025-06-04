@@ -36,7 +36,7 @@ $e = [gc]::GetTotalAllocatedBytes($true)
 Write-Output "the end total of shapes is $shapecount using $($e - $s) bytes"
 Initialize-PowerGL -phase 1
 Initialize-PowerGL -phase 2 -shapesarray $Shape_array
-Start-PowerGL -ProgramFlag "DEV_BUGLAND"
+Start-PowerGL -ProgramFlag "pipe_enable"
 $pipe = Initialize-PowerGL -phase 3
 $pipe_string = "DEBUG:PIPETALKED"
 $pipe_len = $pipe.WriteDirective($pipe_string)

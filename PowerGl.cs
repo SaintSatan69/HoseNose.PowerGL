@@ -736,13 +736,35 @@ namespace HoseRenderer
                 }
                 if (this.IsModel)
                 {
-                    shader.SetUniform("uTexture0", 3);
+                    try
+                    {
+                        shader.SetUniform("uTexture0", 3);
+                    }
+                    catch
+                    {
+                        Debugger.Log(1,"Shaders","Shader Doesn't have a vertex+fragment pair that  implements uTexture0 correctly");
+                        MainRenderer.EngineLogger.Log($"//WARN// the shape {this.ShapeName}-{this.ShapeNum} shader is missing the uniform uTexture0, this maybe be ignoreable if the model looks weird then it is probably this causing errors!!");
+                    }
+                    try
+                    {
+                        //This can fail, which is fine as its only used it things want to use it
+                        shader.SetUniform("time", (float)DateTime.Now.Ticks);
+                    }
+                    catch { }
                     foreach (var mesh in this.Model.Meshes)
                     {
                         mesh.Bind();
                         shader.use();
                         texture.Bind();
-                        shader.SetUniform("uTexture0", 0);
+                        try
+                        {
+                            shader.SetUniform("uTexture0", 0);
+                        }
+                        catch { }
+                        try {
+                            //This can fail, which is fine as its only used it things want to use it
+                            shader.SetUniform("time",(float)DateTime.Now.Ticks);
+                        } catch { }
                         shader.SetUniform("uModel", Magic_Matrix);
                         shader.SetUniform("uView", camera.GetViewMatrix());
                         shader.SetUniform("uProjection", camera.GetProjectionMatrix());

@@ -2,6 +2,8 @@
 
 out vec4 FragColor;
 in vec2 fTexCoords;
+in vec2 fUv;
+uniform sampler2D uTexture0;
 
 // Function to generate Perlin noise
 float noise(vec2 p) {
@@ -30,7 +32,8 @@ float fractalNoise(vec2 p) {
 }
 
 void main() {
-    vec2 uv = fTexCoords * 5.0; // Scale UV coordinates for cloud effect
+    vec2 uv = fUv * 5.0; // Scale UV coordinates for cloud effect
     float cloud = fractalNoise(uv);
+    vec4 Sacrificalvalue = texture(uTexture0,fUv); //A stub to get the engine to not complain about not finding uTexture0
     FragColor = vec4(vec3(cloud), 1.0); // Output cloud color
 }
