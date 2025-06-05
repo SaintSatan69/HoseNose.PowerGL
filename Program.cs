@@ -15,6 +15,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Text.Json;
+using System.Net.WebSockets;
+using System.Threading.Tasks;
 
 
 namespace HoseRenderer
@@ -30,7 +32,7 @@ namespace HoseRenderer
         /// <summary>
         /// The Static sting of the engine verion
         /// </summary>
-        public static readonly string EngineVersion = "0.0.2.0";
+        public static readonly string EngineVersion = "0.0.4.0";
 
         /// <summary>
         /// The Engine Config Object Represents the way the developer intended to use the avaiable editable attributes of the engine
@@ -338,6 +340,10 @@ namespace HoseRenderer
                         var Client = APISERVER.GetContext();
                         if (Client != null)
                         {
+                            if (Client.Request.IsWebSocketRequest)
+                            {
+                                ProcessWebSocket(Client);
+                            }
                             //Stuff that is unique per client
                             var Request = Client.Request;
                             var Response = Client.Response;
@@ -426,7 +432,7 @@ namespace HoseRenderer
                                 else if (modifyStatus == -1)
                                 {
                                     Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid was presented to the engine"));
+                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid property was presented to the engine"));
                                     Response.Close();
                                 }
                                 else if (modifyStatus == -2)
@@ -1103,8 +1109,32 @@ namespace HoseRenderer
         {
             Exception exception = crashevents.ExceptionObject as Exception ?? new Exception("ENGINE CRASH MEGA BAD"); 
             Console.WriteLine($"ENGINE CRASH {exception.Message}");
-            EngineLogger.Log($"//CRITICAL FAILURE// CONFIGURATION IS INVALID EXCEPTION MESSAGE: {exception.Message}{Environment.NewLine} STACK TRACE FOR BUG REPORT {exception.StackTrace}");
+            EngineLogger.Log($"//CRITICAL FAILURE// ENIGINE CRASH EVENT EXCEPTION MESSAGE: {exception.Message}{Environment.NewLine} STACK TRACE FOR BUG REPORT {exception.StackTrace}");
             Console.ReadLine();
+        }
+
+        public static void ProcessWebSocket(HttpListenerContext context)
+        {
+            HttpListenerWebSocketContext WebSocketContext =  context.AcceptWebSocketAsync(null).Result;
+            WebSocket WebSocket = WebSocketContext.WebSocket;
+            byte[] SocketBuffer = new byte[1024];
+            while (WebSocket.State == WebSocketState.Open)
+            {
+                WebSocketReceiveResult Result = WebSocket.ReceiveAsync(new ArraySegment<byte>(SocketBuffer),CancellationToken.None).Result;
+                if (Result.MessageType == WebSocketMessageType.Text)
+                {
+                    HttpObject? Data = JsonSerializer.Deserialize<HttpObject>(Encoding.UTF8.GetString(SocketBuffer));
+                    if (Data != null)
+                    {
+                        //the websock will only allow a single shape data to send to not overload the engine or the client
+
+                    }
+                }
+                else if (Result.MessageType == WebSocketMessageType.Close)
+                {
+                    WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,"Closing",CancellationToken.None).RunSynchronously();
+                }
+            }
         }
     }
 }

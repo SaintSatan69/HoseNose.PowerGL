@@ -68,6 +68,12 @@ namespace HoseRenderer
         public int HTTPPort { get; private set; } = 6969;
 
         /// <summary>
+        /// Wether or not Websocks are available over the HTTP interface, useless if they aren't
+        /// </summary>
+        [JsonProperty]
+        public bool AreWebsocketsAvailable { get; private set; } = true;
+
+        /// <summary>
         /// The Graphics API Used by the engine, defaults to OpenGL
         /// </summary>
         [JsonProperty]
