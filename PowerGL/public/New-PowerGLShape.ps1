@@ -30,7 +30,8 @@ function New-PowerGLShape() {
         [bool]$IsEffectedByGravity = $false,
         [uint32]$Controllable = 0,
         [uint32]$player = 1,
-        [string]$ModelFile = "$($script:ProgramDirectory)\Model\Sphere.model"
+        [string]$ModelFile = "$($script:ProgramDirectory)\Model\Sphere.model",
+        [float]$CullingDistance = 200
 
 
     )
@@ -46,5 +47,5 @@ function New-PowerGLShape() {
     $shr_vec = [System.Numerics.Vector3]::new($ShrX, $ShrY, $ShrZ)
     $mom_vec = [System.Numerics.Vector3]::new($InitalMomentumX, $InitalMomentumY, $InitalMomentumZ)
 
-    return [HoseRenderer.PowerGL.Shape]::new($shapename, $pos_vec, $shapenum, $reflective, $Glowing, $ShaderPath, $FragmentPath, $TexturePath, $rot_vec, $Size, $str_vec, $shr_vec, $Collision, $mom_vec, $Restitution, [bool]$IsEffectedByGravity, $Controllable, $player, $true, $ModelFile)
+    return [HoseRenderer.PowerGL.Shape]::new($shapename, $pos_vec, $shapenum, $reflective, $Glowing, $ShaderPath, $FragmentPath, $TexturePath, $rot_vec, $Size, $str_vec, $shr_vec, $Collision, $mom_vec, $Restitution, [bool]$IsEffectedByGravity, $Controllable, $player, $true, $ModelFile, $CullingDistance)
 }
