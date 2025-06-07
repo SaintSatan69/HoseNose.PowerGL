@@ -342,7 +342,7 @@ namespace HoseRenderer
                         {
                             if (Client.Request.IsWebSocketRequest)
                             {
-                                ProcessWebSocket(Client);
+                                ProcessWebSocket(Client,HttpAPILogger);
                             }
                             //Stuff that is unique per client
                             var Request = Client.Request;
@@ -1113,7 +1113,7 @@ namespace HoseRenderer
             Console.ReadLine();
         }
 
-        public static void ProcessWebSocket(HttpListenerContext context)
+        public static void ProcessWebSocket(HttpListenerContext context, Logger logger)
         {
             HttpListenerWebSocketContext WebSocketContext =  context.AcceptWebSocketAsync(null).Result;
             WebSocket WebSocket = WebSocketContext.WebSocket;
@@ -1126,8 +1126,35 @@ namespace HoseRenderer
                     HttpObject? Data = JsonSerializer.Deserialize<HttpObject>(Encoding.UTF8.GetString(SocketBuffer));
                     if (Data != null)
                     {
+                        float? scale;
+                        if (Data.Property == "Scale")
+                        {
+                            scale = Data.ValueX;
+                        }
+                        else
+                        {
+                            scale = null;
+                        }
+                        string Websock_Responsestring = string.Empty;
                         //the websock will only allow a single shape data to send to not overload the engine or the client
-
+                        int modifystatus = -3;
+                        try
+                        {
+                            modifystatus = ModifyShapeProperty((int)Data.ShapeNumber, Data.Property, Data.ValueX, Data.ValueY, Data.ValueZ, null, null, null, scale);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Log($"WebSocket Encountered big oof error trying to modify shapes {ex.StackTrace}");
+                            modifystatus = -3;
+                        }
+                        Websock_Responsestring = modifystatus switch
+                        {
+                            0 => "OK, Server Applied Changes Correclty",
+                            -1 => "OK, Server got data but no valid property was given to the engine",
+                            -2 => "OK, Server Got the data, but failed to apply correctly check engine log for details",
+                            _ => "ERROR, Server failed to process request entirely"
+                        };
+                        WebSocket.SendAsync(Encoding.UTF8.GetBytes(Websock_Responsestring),WebSocketMessageType.Text,true,CancellationToken.None);
                     }
                 }
                 else if (Result.MessageType == WebSocketMessageType.Close)
