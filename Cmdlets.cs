@@ -4,6 +4,9 @@ using System.Text;
 using System.Text.Json;
 namespace HoseRenderer
 {
+    /// <summary>
+    /// A cmdlet that will connect to the engine websocket API and return the connection
+    /// </summary>
     [Cmdlet(VerbsCommon.New,"PowerGLWebSocket")]
     public class NewPowerGLWebSocket : Cmdlet
     {
@@ -28,38 +31,40 @@ namespace HoseRenderer
         {
             ClientWebSocket _websocket = new();
             WriteDebug($"Connecting to {_TargetComputer}:{_Port}");
-            _websocket.ConnectAsync(new Uri($"{_TargetComputer}:{_Port}/api/shapes/"),CancellationToken.None).RunSynchronously();
+            _websocket.ConnectAsync(new Uri($"ws://{_TargetComputer}:{_Port}/api/shapes/"),CancellationToken.None).Wait();
             WriteDebug("Connection Successfull");
             WriteObject( _websocket );
         }
     }
-    
+    /// <summary>
+    /// A cmdlet to write to the given websocket with the given payload, otherwise generates the payload and the websocket connection 
+    /// </summary>
     [Cmdlet(VerbsCommunications.Write,"PowerGLWebSocket")]
     public class WritePowerGLWebSocket : Cmdlet
     {
         //TODO FINISH IMPLEMENTING THE WRITE-POWERGLWEBSOCKET
         [Parameter(Position = 0, Mandatory = true, ParameterSetName = "SocketParameterized")]
-        WebSocket WebSocket
+        public WebSocket WebSocket
         {
             get { return _Socket; }
             set { _Socket = value; }
         }
         [Parameter(Position = 1,Mandatory = true, ParameterSetName = "SocketNotProvided")]
-        string TargetComputer
+        public string TargetComputer
         {
             get { return _TargetComputer; }
             set { _TargetComputer = value; }
         }
         [Parameter(Position = 2, Mandatory = true, ParameterSetName = "SocketNotProvided")]
-        int Port
+        public int Port
         {
             get { return _Port; }
             set { _Port = value; }
         }
-        [Parameter(Position = 3, Mandatory = true, ParameterSetName = "RequestPipedOrProvided",ValueFromPipeline = true)]
-        [Parameter(Position = 3, Mandatory = true, ParameterSetName = "SocketParameterized", ValueFromPipeline = true)]
-        [Parameter(Position = 3, Mandatory = true, ParameterSetName = "SocketNotProvided", ValueFromPipeline = true)]
-        HttpObject InputObject
+        [Parameter(Position = 3, ParameterSetName = "RequestPipedOrProvided",ValueFromPipeline = true)]
+        [Parameter(Position = 3, ParameterSetName = "SocketParameterized", ValueFromPipeline = true)]
+        [Parameter(Position = 3, ParameterSetName = "SocketNotProvided", ValueFromPipeline = true)]
+        public  HttpObject InputObject
         {
             get { return _InputObject; }
             set { _InputObject = value; }
@@ -67,7 +72,7 @@ namespace HoseRenderer
         [Parameter(Mandatory = true, ParameterSetName = "SocketParameterized")]
         [Parameter(Mandatory = true, ParameterSetName = "SocketNotProvided")]
         [Parameter(Mandatory = true, ParameterSetName = "RequestDataNotProvided")]
-        uint ShapeNumber
+        public uint ShapeNumber
         {
             get { return _Shapenum; }
             set { _Shapenum = value; }
@@ -76,7 +81,7 @@ namespace HoseRenderer
         [Parameter(Mandatory = true, ParameterSetName = "SocketNotProvided")]
         [Parameter(Mandatory = true, ParameterSetName = "RequestDataNotProvided")]
         [ValidateSet(new string[] { "Position","Size","Stretch","Shear","Restitution", "Momentum", "Rotation" })]
-        string Property
+        public string Property
         {
             get { return _Property; }
             set { _Property = value; }
@@ -84,7 +89,7 @@ namespace HoseRenderer
         [Parameter(Mandatory = true, ParameterSetName = "SocketParameterized")]
         [Parameter(Mandatory = true, ParameterSetName = "SocketNotProvided")]
         [Parameter(Mandatory = true, ParameterSetName = "RequestDataNotProvided")]
-        float X
+        public float X
         {
             get { return _ValueX; }
             set { _ValueX = value; }
@@ -92,7 +97,7 @@ namespace HoseRenderer
         [Parameter(ParameterSetName = "SocketParameterized")]
         [Parameter(ParameterSetName = "SocketNotProvided")]
         [Parameter(ParameterSetName = "RequestDataNotProvided")]
-        float Y
+        public float Y
         {
             get { return _ValueY; }
             set { _ValueY = value; }
@@ -100,7 +105,7 @@ namespace HoseRenderer
         [Parameter(ParameterSetName = "SocketParameterized")]
         [Parameter(ParameterSetName = "SocketNotProvided")]
         [Parameter(ParameterSetName = "RequestDataNotProvided")]
-        float Z
+        public float Z
         {
             get { return _ValueZ; }
             set { _ValueZ = value; }
@@ -125,7 +130,7 @@ namespace HoseRenderer
                 {
                     ClientWebSocket _websocket = new();
                     WriteDebug($"Connecting to {_TargetComputer}:{_Port}");
-                    _websocket.ConnectAsync(new Uri($"{_TargetComputer}:{_Port}/api/shapes/"), CancellationToken.None).RunSynchronously();
+                    _websocket.ConnectAsync(new Uri($"ws://{_TargetComputer}:{_Port}/api/shapes/"), CancellationToken.None).Wait();
                     WriteDebug("Connection Successfull");
                     _Socket = _websocket;
                     CloseWhenDone = true;
@@ -140,9 +145,19 @@ namespace HoseRenderer
                 WriteDebug("Making Payload");
                 _InputObject = new HttpObject(_Shapenum,_Property,_ValueX,_ValueY,_ValueZ);
             }
+            if (_InputObject.Property == "Rotation")
+            {
+                _InputObject.Property = "Rotate";
+            }
             WriteDebug("Sending Payload to endpoint");
-            _Socket.SendAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(_InputObject)),WebSocketMessageType.Text,false,CancellationToken.None).RunSynchronously();
+            byte[] WebSocketRequestBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(_InputObject));
 
+            _Socket.SendAsync(new byte[] { (byte)WebSocketRequestBytes.Length },WebSocketMessageType.Text,false,CancellationToken.None).Wait();
+
+            _Socket.SendAsync(WebSocketRequestBytes, WebSocketMessageType.Text, false, CancellationToken.None).Wait() ;
+            byte[] recievebuff = new byte[1024];
+            var result = _Socket.ReceiveAsync(recievebuff,CancellationToken.None).Result;
+            WriteObject(Encoding.UTF8.GetString(recievebuff));
             if (CloseWhenDone)
             {
                 _Socket.SendAsync(new byte[10],WebSocketMessageType.Close,true,CancellationToken.None);

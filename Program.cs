@@ -116,6 +116,8 @@ namespace HoseRenderer
         //HttpAPI Things
         private static bool IsEngineAwaitingProcessRequest = false;
 
+        private static int WebSocketBufferLength = 1024;
+
 
 #pragma warning restore CS8618 
         /// <summary>
@@ -342,110 +344,123 @@ namespace HoseRenderer
                         {
                             if (Client.Request.IsWebSocketRequest)
                             {
-                                ProcessWebSocket(Client,HttpAPILogger);
+                                HttpAPILogger.Log("WebSocket Client Being Handled");
+                                try
+                                {
+                                    ProcessWebSocket(Client, HttpAPILogger);
+                                }
+                                catch(Exception ex)
+                                {
+                                    Debugger.Log(1,"",$"Exception during the Websocket handling {ex.Message}{Environment.NewLine}");
+                                    HttpAPILogger.Log($"During normal handling of the websocket the following exception occured {ex.Message}{Environment.NewLine} For Bug Reports the stack trace:{ex.StackTrace}");
+                                }
                             }
-                            //Stuff that is unique per client
-                            var Request = Client.Request;
-                            var Response = Client.Response;
-                            Stream Output = Response.OutputStream;
+                            else
+                            {
+                                //Stuff that is unique per client
+                                var Request = Client.Request;
+                                var Response = Client.Response;
+                                Stream Output = Response.OutputStream;
 
-                            //Check the user agent to log incase the user agent isn't powershell which isn't supported but it still will respond
-                            if (Request.UserAgent.Contains("PowerShell"))
-                            {
-                                Debugger.Log(1, "", $"PowerShell Request detected YIPPE{Environment.NewLine}");
-                            }
-                            else
-                            {
-                                HttpAPILogger.Log($"Non Powershell user agent made the request user agent is {Request.UserAgent}, If this is a web browser it may not behave correctly");
-                            }
-                            HttpObject? requestData = null;
-                            try
-                            {
-                                requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
-                            }
-                            catch
-                            {
-                                requestData = null;
-                            }
-                            if (requestData == null && Request.HttpMethod == HttpMethod.Post.ToString())
-                            {
-                                HttpAPILogger.Log("Incomplete Request Sent");
-                                Response.StatusCode = (int)HttpStatusCode.PartialContent;
-                                var incompletedatamsgbyte = Encoding.UTF8.GetBytes("Incomplete Data to Complete Request");
-                                Response.ContentLength64 = incompletedatamsgbyte.Length;
-                                Output.Write(incompletedatamsgbyte, 0, incompletedatamsgbyte.Length);
-                                Response.Close();
-                            }
-                            else if (Request.HttpMethod == HttpMethod.Get.ToString())
-                            {
-                                if (requestData != null)
+                                //Check the user agent to log incase the user agent isn't powershell which isn't supported but it still will respond
+                                if (Request.UserAgent.Contains("PowerShell"))
                                 {
-                                    Shape RequestedShape = Shapes[requestData.ShapeNumber];
-                                    HttpObject RequestedShapeResponse = requestData.Property switch
-                                    {
-                                        "Position" => new HttpObject(RequestedShape.ShapeNum, "Position", RequestedShape.PosX, RequestedShape.PosY, RequestedShape.PosZ),
-                                        "Size" => new HttpObject(RequestedShape.ShapeNum, "Size", RequestedShape.Size, 0, 0),
-                                        "Stretch" => new HttpObject(RequestedShape.ShapeNum, "Stretch", RequestedShape.StrX, RequestedShape.StrY, RequestedShape.StrZ),
-                                        "Shear" => new HttpObject(RequestedShape.ShapeNum, "Shear", RequestedShape.ShrX, RequestedShape.ShrY, RequestedShape.ShrZ),
-                                        "Restitution" => new HttpObject(RequestedShape.ShapeNum, "Restitution", RequestedShape.Restitution, 0, 0),
-                                        "Momentum" => new HttpObject(RequestedShape.ShapeNum, "Momentum", RequestedShape.MomentumX, RequestedShape.MomentumY, RequestedShape.MomentumZ),
-                                        "Rotation" => new HttpObject(RequestedShape.ShapeNum, "Rotation", RequestedShape.RotX, RequestedShape.RotY, RequestedShape.RotZ),
-                                        _ => new HttpObject(0, "NONE OR INVALID PROPERTY", 0, 0, 0)
-                                    };
-                                    Response.StatusCode = 200;
-                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize<HttpObject>(RequestedShapeResponse)));
-                                    Response.Close();
+                                    Debugger.Log(1, "", $"PowerShell Request detected YIPPE{Environment.NewLine}");
                                 }
                                 else
                                 {
-                                    //StringBuilder JSON_BUILDER = new StringBuilder();
-                                    //JSON_BUILDER.Append('[');
-                                    //Might thread lock if its trying to render while also trying to serialize it, might need to add a deep clone and synchronization into it and store a copy
-                                    ShapeHttpObjectCollectionEntry[] shapeHttpObjectCollectionEntries = new ShapeHttpObjectCollectionEntry[Shapes.Length];
-                                    int Indexer = 0;
-                                    foreach (Shape shape in Shapes)
+                                    HttpAPILogger.Log($"Non Powershell user agent made the request user agent is {Request.UserAgent}, If this is a web browser it may not behave correctly");
+                                }
+                                HttpObject? requestData = null;
+                                try
+                                {
+                                    requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
+                                }
+                                catch
+                                {
+                                    requestData = null;
+                                }
+                                if (requestData == null && Request.HttpMethod == HttpMethod.Post.ToString())
+                                {
+                                    HttpAPILogger.Log("Incomplete Request Sent");
+                                    Response.StatusCode = (int)HttpStatusCode.PartialContent;
+                                    var incompletedatamsgbyte = Encoding.UTF8.GetBytes("Incomplete Data to Complete Request");
+                                    Response.ContentLength64 = incompletedatamsgbyte.Length;
+                                    Output.Write(incompletedatamsgbyte, 0, incompletedatamsgbyte.Length);
+                                    Response.Close();
+                                }
+                                else if (Request.HttpMethod == HttpMethod.Get.ToString())
+                                {
+                                    if (requestData != null)
                                     {
-                                        shapeHttpObjectCollectionEntries[Indexer] = new ShapeHttpObjectCollectionEntry(shape);
-                                        Indexer++;
+                                        Shape RequestedShape = Shapes[requestData.ShapeNumber];
+                                        HttpObject RequestedShapeResponse = requestData.Property switch
+                                        {
+                                            "Position" => new HttpObject(RequestedShape.ShapeNum, "Position", RequestedShape.PosX, RequestedShape.PosY, RequestedShape.PosZ),
+                                            "Size" => new HttpObject(RequestedShape.ShapeNum, "Size", RequestedShape.Size, 0, 0),
+                                            "Stretch" => new HttpObject(RequestedShape.ShapeNum, "Stretch", RequestedShape.StrX, RequestedShape.StrY, RequestedShape.StrZ),
+                                            "Shear" => new HttpObject(RequestedShape.ShapeNum, "Shear", RequestedShape.ShrX, RequestedShape.ShrY, RequestedShape.ShrZ),
+                                            "Restitution" => new HttpObject(RequestedShape.ShapeNum, "Restitution", RequestedShape.Restitution, 0, 0),
+                                            "Momentum" => new HttpObject(RequestedShape.ShapeNum, "Momentum", RequestedShape.MomentumX, RequestedShape.MomentumY, RequestedShape.MomentumZ),
+                                            "Rotation" => new HttpObject(RequestedShape.ShapeNum, "Rotation", RequestedShape.RotX, RequestedShape.RotY, RequestedShape.RotZ),
+                                            _ => new HttpObject(0, "NONE OR INVALID PROPERTY", 0, 0, 0)
+                                        };
+                                        Response.StatusCode = 200;
+                                        Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize<HttpObject>(RequestedShapeResponse)));
+                                        Response.Close();
                                     }
-                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shapeHttpObjectCollectionEntries)));
-                                    Response.StatusCode = 200;
-                                    Response.Close();
+                                    else
+                                    {
+                                        //StringBuilder JSON_BUILDER = new StringBuilder();
+                                        //JSON_BUILDER.Append('[');
+                                        //Might thread lock if its trying to render while also trying to serialize it, might need to add a deep clone and synchronization into it and store a copy
+                                        ShapeHttpObjectCollectionEntry[] shapeHttpObjectCollectionEntries = new ShapeHttpObjectCollectionEntry[Shapes.Length];
+                                        int Indexer = 0;
+                                        foreach (Shape shape in Shapes)
+                                        {
+                                            shapeHttpObjectCollectionEntries[Indexer] = new ShapeHttpObjectCollectionEntry(shape);
+                                            Indexer++;
+                                        }
+                                        Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shapeHttpObjectCollectionEntries)));
+                                        Response.StatusCode = 200;
+                                        Response.Close();
+                                    }
                                 }
-                            }
-                            else if (Request.HttpMethod == HttpMethod.Post.ToString() && requestData != null)
-                            {
-                                float? scale = 0;
-                                if (requestData.Property.ToLower() == "scale")
+                                else if (Request.HttpMethod == HttpMethod.Post.ToString() && requestData != null)
                                 {
-                                    scale = requestData.ValueX;
+                                    float? scale = 0;
+                                    if (requestData.Property.ToLower() == "scale")
+                                    {
+                                        scale = requestData.ValueX;
+                                    }
+                                    else
+                                    {
+                                        scale = null;
+                                    }
+                                    int modifyStatus = ModifyShapeProperty((int)requestData.ShapeNumber, requestData.Property, requestData.ValueX, requestData.ValueY, requestData.ValueZ, null, null, null, scale);
+                                    if (modifyStatus == 0)
+                                    {
+                                        Response.StatusCode = 200;
+                                        Response.Close();
+                                    }
+                                    else if (modifyStatus == -1)
+                                    {
+                                        Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                        Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid property was presented to the engine"));
+                                        Response.Close();
+                                    }
+                                    else if (modifyStatus == -2)
+                                    {
+                                        Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                        Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber}-{requestData.Property} Please look at the log at {HttpAPILogger.Log_Directory}"));
+                                        Response.Close();
+                                    }
                                 }
                                 else
                                 {
-                                    scale = null;
+                                    Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                                    string invalidhttpmethodbody = "Invalid HTTP method sent to server";
                                 }
-                                int modifyStatus = ModifyShapeProperty((int)requestData.ShapeNumber, requestData.Property, requestData.ValueX, requestData.ValueY, requestData.ValueZ, null, null, null, scale);
-                                if (modifyStatus == 0) {
-                                    Response.StatusCode = 200;
-                                    Response.Close();                                
-                                }
-                                else if (modifyStatus == -1)
-                                {
-                                    Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid property was presented to the engine"));
-                                    Response.Close();
-                                }
-                                else if (modifyStatus == -2)
-                                {
-                                    Response.StatusCode= (int)HttpStatusCode.InternalServerError;
-                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber}-{requestData.Property} Please look at the log at {HttpAPILogger.Log_Directory}"));
-                                    Response.Close();
-                                }
-                            }
-                            else
-                            {
-                                Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                                string invalidhttpmethodbody = "Invalid HTTP method sent to server";
                             }
                         }
                     }
@@ -1117,49 +1132,58 @@ namespace HoseRenderer
         {
             HttpListenerWebSocketContext WebSocketContext =  context.AcceptWebSocketAsync(null).Result;
             WebSocket WebSocket = WebSocketContext.WebSocket;
-            byte[] SocketBuffer = new byte[1024];
+
             while (WebSocket.State == WebSocketState.Open)
             {
+                
+                byte[] SocketBuffer = new byte[WebSocketBufferLength];
                 WebSocketReceiveResult Result = WebSocket.ReceiveAsync(new ArraySegment<byte>(SocketBuffer),CancellationToken.None).Result;
                 if (Result.MessageType == WebSocketMessageType.Text)
                 {
-                    HttpObject? Data = JsonSerializer.Deserialize<HttpObject>(Encoding.UTF8.GetString(SocketBuffer));
-                    if (Data != null)
+                    if ((char)SocketBuffer[0] == '{') {
+                        string JSON = (Encoding.UTF8.GetString(SocketBuffer));
+                        HttpObject? Data = JsonSerializer.Deserialize<HttpObject>(JSON);
+                        if (Data != null)
+                        {
+                            float? scale;
+                            if (Data.Property == "Scale")
+                            {
+                                scale = Data.ValueX;
+                            }
+                            else
+                            {
+                                scale = null;
+                            }
+                            string Websock_Responsestring = string.Empty;
+                            //the websock will only allow a single shape data to send to not overload the engine or the client
+                            int modifystatus = -3;
+                            try
+                            {
+                                modifystatus = ModifyShapeProperty((int)Data.ShapeNumber, Data.Property, Data.ValueX, Data.ValueY, Data.ValueZ, null, null, null, scale);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Log($"WebSocket Encountered big oof error trying to modify shapes {ex.StackTrace}");
+                                modifystatus = -3;
+                            }
+                            Websock_Responsestring = modifystatus switch
+                            {
+                                0 => "OK, Server Applied Changes Correclty",
+                                -1 => "OK, Server got data but no valid property was given to the engine",
+                                -2 => "OK, Server Got the data, but failed to apply correctly check engine log for details",
+                                _ => "ERROR, Server failed to process request entirely"
+                            };
+                            WebSocket.SendAsync(Encoding.UTF8.GetBytes(Websock_Responsestring), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                        }
+                    }
+                    else
                     {
-                        float? scale;
-                        if (Data.Property == "Scale")
-                        {
-                            scale = Data.ValueX;
-                        }
-                        else
-                        {
-                            scale = null;
-                        }
-                        string Websock_Responsestring = string.Empty;
-                        //the websock will only allow a single shape data to send to not overload the engine or the client
-                        int modifystatus = -3;
-                        try
-                        {
-                            modifystatus = ModifyShapeProperty((int)Data.ShapeNumber, Data.Property, Data.ValueX, Data.ValueY, Data.ValueZ, null, null, null, scale);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Log($"WebSocket Encountered big oof error trying to modify shapes {ex.StackTrace}");
-                            modifystatus = -3;
-                        }
-                        Websock_Responsestring = modifystatus switch
-                        {
-                            0 => "OK, Server Applied Changes Correclty",
-                            -1 => "OK, Server got data but no valid property was given to the engine",
-                            -2 => "OK, Server Got the data, but failed to apply correctly check engine log for details",
-                            _ => "ERROR, Server failed to process request entirely"
-                        };
-                        WebSocket.SendAsync(Encoding.UTF8.GetBytes(Websock_Responsestring),WebSocketMessageType.Text,true,CancellationToken.None);
+                        WebSocketBufferLength = (int)SocketBuffer[0];
                     }
                 }
                 else if (Result.MessageType == WebSocketMessageType.Close)
                 {
-                    WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,"Closing",CancellationToken.None).RunSynchronously();
+                    WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,"Closing",CancellationToken.None).Wait();
                 }
             }
         }
