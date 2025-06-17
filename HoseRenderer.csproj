@@ -54,6 +54,9 @@
     <None Update="Model\cube.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Model\hossage.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Model\Sphere.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -100,6 +103,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Randompictures\Powershell7_blue.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Randompictures\RainingChamp.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Randompictures\silk.png">

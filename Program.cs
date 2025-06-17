@@ -18,6 +18,7 @@ using System.Text.Json;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 
+// In Memory of Big Hoss -6/16/2025 may he be immortalized in this scuffed engine
 
 namespace HoseRenderer
 {
@@ -121,7 +122,7 @@ namespace HoseRenderer
 
 #pragma warning restore CS8618 
         /// <summary>
-        /// thanks VS I totally need a summary of the Main function Who doesn't know what this does and programs C# ???????
+        /// The Engines Program Entry Point
         /// </summary>
         /// <param name="args"></param>
         public static void Main(string[] args)
@@ -1168,7 +1169,7 @@ namespace HoseRenderer
                             }
                             Websock_Responsestring = modifystatus switch
                             {
-                                0 => "OK, Server Applied Changes Correclty",
+                                0 => "OK, Server Applied Changes Correctly",
                                 -1 => "OK, Server got data but no valid property was given to the engine",
                                 -2 => "OK, Server Got the data, but failed to apply correctly check engine log for details",
                                 _ => "ERROR, Server failed to process request entirely"
