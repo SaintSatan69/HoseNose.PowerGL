@@ -54,6 +54,9 @@
     <None Update="Model\cube.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Model\hossage.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Model\Sphere.model">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -102,6 +105,9 @@
     <None Update="Randompictures\Powershell7_blue.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Randompictures\RainingChamp.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Randompictures\silk.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -127,6 +133,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Shaders\Model.vert">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Shaders\RainbowFragmen.frag">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Shaders\shader.frag">

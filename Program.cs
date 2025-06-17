@@ -15,12 +15,15 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Text.Json;
+using System.Net.WebSockets;
+using System.Threading.Tasks;
 
+// In Memory of Big Hoss -6/16/2025 may he be immortalized in this scuffed engine
 
 namespace HoseRenderer
 {
     /// <summary>
-    /// This is the cursed C# powered PowerShell OpenGL rendering engine because making something practical is no fun anyways
+    /// This is the cursed C# powered PowerShell OpenGL (+Maybe Vulkan) rendering engine because making something practical is no fun anyways
     /// </summary>
     public class MainRenderer
     {
@@ -30,7 +33,7 @@ namespace HoseRenderer
         /// <summary>
         /// The Static sting of the engine verion
         /// </summary>
-        public static readonly string EngineVersion = "0.0.2.0";
+        public static readonly string EngineVersion = "0.0.4.0";
 
         /// <summary>
         /// The Engine Config Object Represents the way the developer intended to use the avaiable editable attributes of the engine
@@ -50,19 +53,6 @@ namespace HoseRenderer
         private static BufferObject<float> Vbo;
         private static BufferObject<uint> Ebo;
 
-        private static BufferObject<float> shapevbo;
-        private static VertexArrayObject<float, uint> shapeVAO;
-        private static Shader shader;
-        private static Shader LightingShader;
-        private static Shader LampShader;
-        private static Vector3 LampPosition = new Vector3(1.2f, 1.0f, 2.0f);
-
-        private static Texture DiffuseMap;
-        private static Texture SpecularMap;
-        private static Texture texture;
-
-        private static Model model;
-        private static Vector3 ModelPosition = new Vector3(2.0f, 1.0f, 3.0f);
 
         private static Camera Camera;
 
@@ -71,15 +61,12 @@ namespace HoseRenderer
         private static DateTime StartTime;
 
         private static PowerGLPipe Pipe;
-        //debugging shape movements before attempting to complete the named pipe communion 
-        private static float translationy = 1.0f;
-        private static float rotationz = 1.0f;
-        private static float scale = 1.0f;
 
         private static string[] FLAGS = new string[10];
 
 
         private static Dictionary<string, Texture> _Name_to_texture_dict = new();
+        private static Dictionary<string, Model> _Compiled_Models = new();
 
         private static int _Frame_counter = 0;
 
@@ -130,65 +117,17 @@ namespace HoseRenderer
         //HttpAPI Things
         private static bool IsEngineAwaitingProcessRequest = false;
 
+        private static int WebSocketBufferLength = 1024;
+
 
 #pragma warning restore CS8618 
-        private static readonly float[] Vertices =
-        {
-            //X    Y      Z       Normals             U     V
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f,
-
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f,
-
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f,
-
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f,
-
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f
-        };
-
-        private static readonly uint[] Indices =
-        {
-            0, 1, 3,
-            1, 2, 3
-        };
         /// <summary>
-        /// thanks VS I totally need a summary of the Main function Who doesn't know what this does and programs C# ???????
+        /// The Engines Program Entry Point
         /// </summary>
         /// <param name="args"></param>
         public static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += HandleEngineCrash;
             string argstring = "";
             for (int a = 0; a < args.Length; a++)
             {
@@ -404,108 +343,125 @@ namespace HoseRenderer
                         var Client = APISERVER.GetContext();
                         if (Client != null)
                         {
-                            //Stuff that is unique per client
-                            var Request = Client.Request;
-                            var Response = Client.Response;
-                            Stream Output = Response.OutputStream;
+                            if (Client.Request.IsWebSocketRequest)
+                            {
+                                HttpAPILogger.Log("WebSocket Client Being Handled");
+                                try
+                                {
+                                    ProcessWebSocket(Client, HttpAPILogger);
+                                }
+                                catch(Exception ex)
+                                {
+                                    Debugger.Log(1,"",$"Exception during the Websocket handling {ex.Message}{Environment.NewLine}");
+                                    HttpAPILogger.Log($"During normal handling of the websocket the following exception occured {ex.Message}{Environment.NewLine} For Bug Reports the stack trace:{ex.StackTrace}");
+                                }
+                            }
+                            else
+                            {
+                                //Stuff that is unique per client
+                                var Request = Client.Request;
+                                var Response = Client.Response;
+                                Stream Output = Response.OutputStream;
 
-                            //Check the user agent to log incase the user agent isn't powershell which isn't supported but it still will respond
-                            if (Request.UserAgent.Contains("PowerShell"))
-                            {
-                                Debugger.Log(1, "", $"PowerShell Request detected YIPPE{Environment.NewLine}");
-                            }
-                            else
-                            {
-                                HttpAPILogger.Log($"Non Powershell user agent made the request user agent is {Request.UserAgent}, If this is a web browser it may not behave correctly");
-                            }
-                            HttpObject? requestData = null;
-                            try
-                            {
-                                requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
-                            }
-                            catch
-                            {
-                                requestData = null;
-                            }
-                            if (requestData == null && Request.HttpMethod == HttpMethod.Post.ToString())
-                            {
-                                HttpAPILogger.Log("Incomplete Request Sent");
-                                Response.StatusCode = (int)HttpStatusCode.PartialContent;
-                                var incompletedatamsgbyte = Encoding.UTF8.GetBytes("Incomplete Data to Complete Request");
-                                Response.ContentLength64 = incompletedatamsgbyte.Length;
-                                Output.Write(incompletedatamsgbyte, 0, incompletedatamsgbyte.Length);
-                                Response.Close();
-                            }
-                            else if (Request.HttpMethod == HttpMethod.Get.ToString())
-                            {
-                                if (requestData != null)
+                                //Check the user agent to log incase the user agent isn't powershell which isn't supported but it still will respond
+                                if (Request.UserAgent.Contains("PowerShell"))
                                 {
-                                    Shape RequestedShape = Shapes[requestData.ShapeNumber];
-                                    HttpObject RequestedShapeResponse = requestData.Property switch
-                                    {
-                                        "Position" => new HttpObject(RequestedShape.ShapeNum, "Position", RequestedShape.PosX, RequestedShape.PosY, RequestedShape.PosZ),
-                                        "Size" => new HttpObject(RequestedShape.ShapeNum, "Size", RequestedShape.Size, 0, 0),
-                                        "Stretch" => new HttpObject(RequestedShape.ShapeNum, "Stretch", RequestedShape.StrX, RequestedShape.StrY, RequestedShape.StrZ),
-                                        "Shear" => new HttpObject(RequestedShape.ShapeNum, "Shear", RequestedShape.ShrX, RequestedShape.ShrY, RequestedShape.ShrZ),
-                                        "Restitution" => new HttpObject(RequestedShape.ShapeNum, "Restitution", RequestedShape.Restitution, 0, 0),
-                                        "Momentum" => new HttpObject(RequestedShape.ShapeNum, "Momentum", RequestedShape.MomentumX, RequestedShape.MomentumY, RequestedShape.MomentumZ),
-                                        "Rotation" => new HttpObject(RequestedShape.ShapeNum, "Rotation", RequestedShape.RotX, RequestedShape.RotY, RequestedShape.RotZ),
-                                        _ => new HttpObject(0, "NONE OR INVALID PROPERTY", 0, 0, 0)
-                                    };
-                                    Response.StatusCode = 200;
-                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize<HttpObject>(RequestedShapeResponse)));
-                                    Response.Close();
+                                    Debugger.Log(1, "", $"PowerShell Request detected YIPPE{Environment.NewLine}");
                                 }
                                 else
                                 {
-                                    //StringBuilder JSON_BUILDER = new StringBuilder();
-                                    //JSON_BUILDER.Append('[');
-                                    //Might thread lock if its trying to render while also trying to serialize it, might need to add a deep clone and synchronization into it and store a copy
-                                    ShapeHttpObjectCollectionEntry[] shapeHttpObjectCollectionEntries = new ShapeHttpObjectCollectionEntry[Shapes.Length];
-                                    int Indexer = 0;
-                                    foreach (Shape shape in Shapes)
+                                    HttpAPILogger.Log($"Non Powershell user agent made the request user agent is {Request.UserAgent}, If this is a web browser it may not behave correctly");
+                                }
+                                HttpObject? requestData = null;
+                                try
+                                {
+                                    requestData = JsonSerializer.Deserialize<HttpObject>(Request.InputStream);
+                                }
+                                catch
+                                {
+                                    requestData = null;
+                                }
+                                if (requestData == null && Request.HttpMethod == HttpMethod.Post.ToString())
+                                {
+                                    HttpAPILogger.Log("Incomplete Request Sent");
+                                    Response.StatusCode = (int)HttpStatusCode.PartialContent;
+                                    var incompletedatamsgbyte = Encoding.UTF8.GetBytes("Incomplete Data to Complete Request");
+                                    Response.ContentLength64 = incompletedatamsgbyte.Length;
+                                    Output.Write(incompletedatamsgbyte, 0, incompletedatamsgbyte.Length);
+                                    Response.Close();
+                                }
+                                else if (Request.HttpMethod == HttpMethod.Get.ToString())
+                                {
+                                    if (requestData != null)
                                     {
-                                        shapeHttpObjectCollectionEntries[Indexer] = new ShapeHttpObjectCollectionEntry(shape);
-                                        Indexer++;
+                                        Shape RequestedShape = Shapes[requestData.ShapeNumber];
+                                        HttpObject RequestedShapeResponse = requestData.Property switch
+                                        {
+                                            "Position" => new HttpObject(RequestedShape.ShapeNum, "Position", RequestedShape.PosX, RequestedShape.PosY, RequestedShape.PosZ),
+                                            "Size" => new HttpObject(RequestedShape.ShapeNum, "Size", RequestedShape.Size, 0, 0),
+                                            "Stretch" => new HttpObject(RequestedShape.ShapeNum, "Stretch", RequestedShape.StrX, RequestedShape.StrY, RequestedShape.StrZ),
+                                            "Shear" => new HttpObject(RequestedShape.ShapeNum, "Shear", RequestedShape.ShrX, RequestedShape.ShrY, RequestedShape.ShrZ),
+                                            "Restitution" => new HttpObject(RequestedShape.ShapeNum, "Restitution", RequestedShape.Restitution, 0, 0),
+                                            "Momentum" => new HttpObject(RequestedShape.ShapeNum, "Momentum", RequestedShape.MomentumX, RequestedShape.MomentumY, RequestedShape.MomentumZ),
+                                            "Rotation" => new HttpObject(RequestedShape.ShapeNum, "Rotation", RequestedShape.RotX, RequestedShape.RotY, RequestedShape.RotZ),
+                                            _ => new HttpObject(0, "NONE OR INVALID PROPERTY", 0, 0, 0)
+                                        };
+                                        Response.StatusCode = 200;
+                                        Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize<HttpObject>(RequestedShapeResponse)));
+                                        Response.Close();
                                     }
-                                    Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shapeHttpObjectCollectionEntries)));
-                                    Response.StatusCode = 200;
-                                    Response.Close();
+                                    else
+                                    {
+                                        //StringBuilder JSON_BUILDER = new StringBuilder();
+                                        //JSON_BUILDER.Append('[');
+                                        //Might thread lock if its trying to render while also trying to serialize it, might need to add a deep clone and synchronization into it and store a copy
+                                        ShapeHttpObjectCollectionEntry[] shapeHttpObjectCollectionEntries = new ShapeHttpObjectCollectionEntry[Shapes.Length];
+                                        int Indexer = 0;
+                                        foreach (Shape shape in Shapes)
+                                        {
+                                            shapeHttpObjectCollectionEntries[Indexer] = new ShapeHttpObjectCollectionEntry(shape);
+                                            Indexer++;
+                                        }
+                                        Output.Write(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shapeHttpObjectCollectionEntries)));
+                                        Response.StatusCode = 200;
+                                        Response.Close();
+                                    }
                                 }
-                            }
-                            else if (Request.HttpMethod == HttpMethod.Post.ToString() && requestData != null)
-                            {
-                                float? scale = 0;
-                                if (requestData.Property.ToLower() == "scale")
+                                else if (Request.HttpMethod == HttpMethod.Post.ToString() && requestData != null)
                                 {
-                                    scale = requestData.ValueX;
+                                    float? scale = 0;
+                                    if (requestData.Property.ToLower() == "scale")
+                                    {
+                                        scale = requestData.ValueX;
+                                    }
+                                    else
+                                    {
+                                        scale = null;
+                                    }
+                                    int modifyStatus = ModifyShapeProperty((int)requestData.ShapeNumber, requestData.Property, requestData.ValueX, requestData.ValueY, requestData.ValueZ, null, null, null, scale);
+                                    if (modifyStatus == 0)
+                                    {
+                                        Response.StatusCode = 200;
+                                        Response.Close();
+                                    }
+                                    else if (modifyStatus == -1)
+                                    {
+                                        Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                        Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid property was presented to the engine"));
+                                        Response.Close();
+                                    }
+                                    else if (modifyStatus == -2)
+                                    {
+                                        Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                                        Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber}-{requestData.Property} Please look at the log at {HttpAPILogger.Log_Directory}"));
+                                        Response.Close();
+                                    }
                                 }
                                 else
                                 {
-                                    scale = null;
+                                    Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                                    string invalidhttpmethodbody = "Invalid HTTP method sent to server";
                                 }
-                                int modifyStatus = ModifyShapeProperty((int)requestData.ShapeNumber, requestData.Property, requestData.ValueX, requestData.ValueY, requestData.ValueZ, null, null, null, scale);
-                                if (modifyStatus == 0) {
-                                    Response.StatusCode = 200;
-                                    Response.Close();                                
-                                }
-                                else if (modifyStatus == -1)
-                                {
-                                    Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber} as no valid was presented to the engine"));
-                                    Response.Close();
-                                }
-                                else if (modifyStatus == -2)
-                                {
-                                    Response.StatusCode= (int)HttpStatusCode.InternalServerError;
-                                    Output.Write(Encoding.UTF8.GetBytes($"Failed to apply changes to {requestData.ShapeNumber}-{requestData.Property} Please look at the log at {HttpAPILogger.Log_Directory}"));
-                                    Response.Close();
-                                }
-                            }
-                            else
-                            {
-                                Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                                string invalidhttpmethodbody = "Invalid HTTP method sent to server";
                             }
                         }
                     }
@@ -522,15 +478,7 @@ namespace HoseRenderer
             window.FramebufferResize += OnFramebufferResize;
             window.Update += OnUpdate;
             window.Closing += OnClose;
-            try
-            {
-                window.Run();
-            }
-            catch (Exception ex)
-            {
-                EngineLogger.Log($"FATAL ERROR IN ENGINE EXCEPTION {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}IF THIS STATES INPUT NOT IMPLEMENTED YOUR LIKELY EXPERIENCING THE ENGINE NOT KNOWING WHAT THE MEDIA KEYS ARE SEE https://github.com/dotnet/Silk.NET/issues/2372 THERE IS NOTHING I CAN DO :(");
-                throw new InvalidOperationException("ENGINE HAS CRASHED LOOK AT THE LOG FILE");
-            }
+            window.Run();
             window.Dispose();
         }
         private static void LoadObjects()
@@ -571,28 +519,6 @@ namespace HoseRenderer
             LoadObjects();
             Console.WriteLine($"Shapes array from LOAD_OBJECTS:{Shapes.Length}");
             guiController = new(Gl, window, input);
-            Ebo = new BufferObject<uint>(Gl, Indices, BufferTargetARB.ElementArrayBuffer);
-            Vbo = new BufferObject<float>(Gl, Vertices, BufferTargetARB.ArrayBuffer);
-            VaoCube = new VertexArrayObject<float, uint>(Gl, Vbo, Ebo);
-            if (Shapes.Length == 0 || FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS")
-            {
-                DebugMessages.PrintDebugMSG("Rending Default Cubes");
-
-                VaoCube.VertexAttributePointer(0, 3, VertexAttribPointerType.Float, 8, 0);
-                VaoCube.VertexAttributePointer(1, 3, VertexAttribPointerType.Float, 8, 3);
-                VaoCube.VertexAttributePointer(2, 2, VertexAttribPointerType.Float, 8, 6);
-
-                LightingShader = new Shader(Gl, $"{Application_Directory}\\Shaders\\shader.vert", $"{Application_Directory}\\Shaders\\lighting.frag");
-
-                LampShader = new Shader(Gl, $"{Application_Directory}\\Shaders\\shader.vert", $"{Application_Directory}\\Shaders\\shader.frag");
-
-                DiffuseMap = new Texture(Gl, $"{Application_Directory}\\randompictures\\silkBoxed.png");
-                SpecularMap = new Texture(Gl, $"{Application_Directory}\\randompictures\\silkSpecular.png");
-
-                shader = new Shader(Gl, $"{Application_Directory}\\Shaders\\Model.vert", $"{Application_Directory}\\Shaders\\Model.frag");
-                texture = new Texture(Gl, $"{Application_Directory}\\Randompictures\\silk.png");
-                model = new Model(Gl, $"{Application_Directory}\\Model\\cube.model");
-            }
             var size = window.FramebufferSize;
             Camera = new Camera(new Vector3(-6.0f, 0.0f, 6.0f), Vector3.UnitX, Vector3.UnitY, (float)size.X / size.Y);
             if (Shapes.Length != 0)
@@ -620,7 +546,16 @@ namespace HoseRenderer
                     }
                     if (Shapes[i].IsModel)
                     {
-                        Shapes[i].CompileModelMesh();
+                        //TODO Add List of compiled modles and like textures attempt to reuse already made models and in the future do the same for shaders
+                        if (_Compiled_Models.ContainsKey(Shapes[i].ModelPath))
+                        {
+                            Shapes[i].Model = _Compiled_Models[Shapes[i].ModelPath];
+                        }
+                        else
+                        {
+                            Shapes[i].CompileModelMesh();
+                            _Compiled_Models.Add(Shapes[i].ModelPath, Shapes[i].Model);
+                        }
                     }
                     if (Shapes[i].Player_moveable == 1 && Shapes[i].Player_scheme == 1)
                     {
@@ -634,26 +569,6 @@ namespace HoseRenderer
                     if (FLAGS[2] == "DEBUG")
                     {
                         Shapes[i].Debug = 1;
-                    }
-                }
-                for (uint i = 0; i < Shapes.Length; i++)
-                {
-                    if (FLAGS[1] == "" || FLAGS[1] == null)
-                    {
-                        VaoCube.VertexAttributePointer(i, 3, VertexAttribPointerType.Float, 8, 3 * (int)i);
-                        if (FLAGS[2] == "DEBUG")
-                        {
-                            DebugMessages.PrintDebugMSG("Using the RAW vertexattribpointer if this is set to render the default cubes that is bad");
-                        }
-
-                    }
-                    else
-                    {
-                        VaoCube.VertexAttributePointer((i + 3), 3, VertexAttribPointerType.Float, 8, 3 * (int)(i + 3));
-                        if (FLAGS[2] == "DEBUG")
-                        {
-                            DebugMessages.PrintDebugMSG($"Using the vertextattribpointer in the context of rendering default cubes. I offset for math is {i + 3}");
-                        }
                     }
                 }
             }
@@ -700,15 +615,6 @@ namespace HoseRenderer
                 Gl.ClearColor(Color.FromArgb(255, (int)(.01f * 255), (int)(.01f * 255), (int)(.01f * 255)));
             }
             Gl.Clear((uint)(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
-            VaoCube.Bind();
-            if (FLAGS[1] == "RENDER_DEFAULT_CUBES_REGARDLESS" || Shapes.Length == 0)
-            {
-                RenderLitCube();
-
-                RenderLampCube();
-
-                RenderModel();
-            }
             if (FLAGS[3] == "PHYSICS")
             {
                 if (!IsGUICalled)
@@ -783,90 +689,6 @@ namespace HoseRenderer
             for (int i = 0; i < Shapes.Length; i++)
             {
                 Shapes[i].Render();
-            }
-        }
-        private static unsafe void RenderLitCube()
-        {
-            LightingShader.use();
-            DiffuseMap.Bind(TextureUnit.Texture0);
-            SpecularMap.Bind(TextureUnit.Texture1);
-            var megamatix = Matrix4x4.Identity;
-            megamatix *= Matrix4x4.CreateRotationY(MathHelper.DegreesToRadians(25f));
-            megamatix *= Matrix4x4.CreateTranslation(new Vector3(1.0f, translationy, 1.0f));
-            megamatix *= Matrix4x4.CreateRotationZ(MathHelper.DegreesToRadians(rotationz));
-            megamatix *= Matrix4x4.CreateScale(scale);
-            LightingShader.SetUniform("uModel", megamatix);
-            LightingShader.SetUniform("uView", Camera.GetViewMatrix());
-            LightingShader.SetUniform("uProjection", Camera.GetProjectionMatrix());
-            LightingShader.SetUniform("material.diffuse", 0);
-            LightingShader.SetUniform("material.specular", 1);
-            LightingShader.SetUniform("material.shininess", 32.0f);
-            LightingShader.SetUniform("viewPos", Camera.Position);
-
-            var diffuseColor = new Vector3(0.5f);
-            var ambientColor = diffuseColor * new Vector3(0.2f);
-
-            LightingShader.SetUniform("light.ambient", ambientColor);
-            LightingShader.SetUniform("light.diffuse", diffuseColor);
-            LightingShader.SetUniform("light.specular", new Vector3(1.0f, 1.0f, 1.0f));
-            LightingShader.SetUniform("light.position", LampPosition);
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
-            if (translationy > 10f)
-            {
-                translationy = 0f;
-            }
-            else
-            {
-                translationy += (0.1f / (2 * scale));
-            }
-            if (scale > 50f)
-            {
-                scale = 1f;
-            }
-            else
-            {
-                scale += 0.1f;
-            }
-            rotationz += (1f / (2 * scale));
-        }
-        private static unsafe void RenderLampCube()
-        {
-            LampShader.use();
-            var lampMatrix = Matrix4x4.Identity;
-            lampMatrix *= Matrix4x4.CreateScale(0.2f);
-            lampMatrix *= Matrix4x4.CreateTranslation(LampPosition);
-
-            LampShader.SetUniform("uModel", lampMatrix);
-            LampShader.SetUniform("uView", Camera.GetViewMatrix());
-            LampShader.SetUniform("uProjection", Camera.GetProjectionMatrix());
-
-            Gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
-        }
-        private static unsafe void RenderModel()
-        {
-            texture.Bind();
-            shader.use();
-            shader.SetUniform("uTexture0", 3);
-
-            var difference = (float)(window.Time * 100);
-
-            var size = window.FramebufferSize;
-
-            var ModelMatrix = Matrix4x4.Identity;
-            ModelMatrix *= Matrix4x4.CreateScale(0.2f);
-            ModelMatrix *= Matrix4x4.CreateTranslation(ModelPosition);
-
-            foreach (var mesh in model.Meshes)
-            {
-                mesh.Bind();
-                shader.use();
-                texture.Bind();
-                shader.SetUniform("uTexture0", 0);
-                shader.SetUniform("uModel", ModelMatrix);
-                shader.SetUniform("uView", Camera.GetViewMatrix());
-                shader.SetUniform("uProjection", Camera.GetProjectionMatrix());
-
-                Gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)mesh.Verticies.Length);
             }
         }
         private static void OnFramebufferResize(Vector2D<int> newSize)
@@ -978,22 +800,7 @@ namespace HoseRenderer
         }
         private static void OnClose()
         {
-            if (Shapes.Length == 0)
-            {
-                Vbo.Dispose();
-
-                VaoCube.Dispose();
-                LightingShader.Dispose();
-                model.Dispose();
-                shader.Dispose();
-
-                texture.Dispose();
-            }
-            else
-            {
-                VaoCube.Dispose();
-            }
-            Ebo.Dispose();
+            EngineLogger.Log("Engine Closing because ESCAPE was pressed BYE BYE");
         }
         private static void KeyDown(IKeyboard arg1, Key arg2, int arg3)
         {
@@ -1311,6 +1118,74 @@ namespace HoseRenderer
             for (int i = 0; i < Properties.Length; i++)
             {
                 Config.UpdateConfiguration(Properties[i], Values[i]);
+            }
+        }
+
+        public static void HandleEngineCrash(object sendder, UnhandledExceptionEventArgs crashevents)
+        {
+            Exception exception = crashevents.ExceptionObject as Exception ?? new Exception("ENGINE CRASH MEGA BAD"); 
+            Console.WriteLine($"ENGINE CRASH {exception.Message}");
+            EngineLogger.Log($"//CRITICAL FAILURE// ENIGINE CRASH EVENT EXCEPTION MESSAGE: {exception.Message}{Environment.NewLine} STACK TRACE FOR BUG REPORT {exception.StackTrace}");
+            Console.ReadLine();
+        }
+
+        public static void ProcessWebSocket(HttpListenerContext context, Logger logger)
+        {
+            HttpListenerWebSocketContext WebSocketContext =  context.AcceptWebSocketAsync(null).Result;
+            WebSocket WebSocket = WebSocketContext.WebSocket;
+
+            while (WebSocket.State == WebSocketState.Open)
+            {
+                
+                byte[] SocketBuffer = new byte[WebSocketBufferLength];
+                WebSocketReceiveResult Result = WebSocket.ReceiveAsync(new ArraySegment<byte>(SocketBuffer),CancellationToken.None).Result;
+                if (Result.MessageType == WebSocketMessageType.Text)
+                {
+                    if ((char)SocketBuffer[0] == '{') {
+                        string JSON = (Encoding.UTF8.GetString(SocketBuffer));
+                        HttpObject? Data = JsonSerializer.Deserialize<HttpObject>(JSON);
+                        if (Data != null)
+                        {
+                            float? scale;
+                            if (Data.Property == "Scale")
+                            {
+                                scale = Data.ValueX;
+                            }
+                            else
+                            {
+                                scale = null;
+                            }
+                            string Websock_Responsestring = string.Empty;
+                            //the websock will only allow a single shape data to send to not overload the engine or the client
+                            int modifystatus = -3;
+                            try
+                            {
+                                modifystatus = ModifyShapeProperty((int)Data.ShapeNumber, Data.Property, Data.ValueX, Data.ValueY, Data.ValueZ, null, null, null, scale);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Log($"WebSocket Encountered big oof error trying to modify shapes {ex.StackTrace}");
+                                modifystatus = -3;
+                            }
+                            Websock_Responsestring = modifystatus switch
+                            {
+                                0 => "OK, Server Applied Changes Correctly",
+                                -1 => "OK, Server got data but no valid property was given to the engine",
+                                -2 => "OK, Server Got the data, but failed to apply correctly check engine log for details",
+                                _ => "ERROR, Server failed to process request entirely"
+                            };
+                            WebSocket.SendAsync(Encoding.UTF8.GetBytes(Websock_Responsestring), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                        }
+                    }
+                    else
+                    {
+                        WebSocketBufferLength = (int)SocketBuffer[0];
+                    }
+                }
+                else if (Result.MessageType == WebSocketMessageType.Close)
+                {
+                    WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,"Closing",CancellationToken.None).Wait();
+                }
             }
         }
     }

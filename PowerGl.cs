@@ -83,7 +83,7 @@ namespace HoseRenderer
             /// [Model] Ignored by the json serializer, it holds the Model object containing the compiled model and its submeshes
             /// </summary>
             [JsonIgnore]
-            public Model? Model { get; private set; }
+            public Model? Model { get; set; }
             /// <summary>
             /// [uint] the number of this specific shape VERY important, the program uses this number to know which of the many shapes to modify
             /// </summary>
@@ -306,32 +306,34 @@ namespace HoseRenderer
             /// [float] the max distance an object will be rendered to save on computer resources
             /// </summary>
             public float Culling_Distance { get; set; } = 200f;
+
+            private bool IgnoreTimeUniform = false;
             /// <summary>
             /// The Base contructor of a shape this is the one that should be used over the parameterless one
             /// </summary>
-            /// <param name="shapename"></param>
-            /// <param name="position"></param>
-            /// <param name="shapenum"></param>
+            /// <param name="shapename">The human name for this shape</param>
+            /// <param name="position">The shapes position in 3d space</param>
+            /// <param name="shapenum">The rngines internal name for the shape</param>
             /// <param name="reflective"></param>
             /// <param name="glowy"></param>
-            /// <param name="shaderpath"></param>
-            /// <param name="fragmentpath"></param>
-            /// <param name="texturepath"></param>
-            /// <param name="rotationvector"></param>
-            /// <param name="size"></param>
-            /// <param name="stretch"></param>
-            /// <param name="shear"></param>
-            /// <param name="Collision"></param>
-            /// <param name="momentum"></param>
-            /// <param name="Restitution"></param>
-            /// <param name="iseffectedbygravity"></param>
-            /// <param name="player_control"></param>
-            /// <param name="player_num"></param>
-            /// <param name="ismodel"></param>
-            /// <param name="modelpath"></param>
-            public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collision,Vector3 momentum,float Restitution,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "")
+            /// <param name="shaderpath">The path to the .vert vertex shader</param>
+            /// <param name="fragmentpath">The path to the .frag fragment shader</param>
+            /// <param name="texturepath">The path to the picture used as the texture</param>
+            /// <param name="rotationvector">The rotation of the shape in 3d space</param>
+            /// <param name="size">The size of the shape</param>
+            /// <param name="stretch">The stretch of the shape in 3d space</param>
+            /// <param name="shear">The shear of the shape in 3d space</param>
+            /// <param name="Collision">Whether or not the shape can collide with other shapes that support collision</param>
+            /// <param name="momentum">The shapes inital momentum from engine start</param>
+            /// <param name="Restitution">The factor of bouncing when a shape collides with another</param>
+            /// <param name="iseffectedbygravity">Whether or not the shape is effected by gravity down</param>
+            /// <param name="player_control">Whether or not the shape can be controlled by a control scheme</param>
+            /// <param name="player_num">The 'Player' number which is what control scheme the shape is controlled by</param>
+            /// <param name="ismodel">Should always be true but whether or not the shape is actually a model</param>
+            /// <param name="modelpath">The path to the .obj or .model file that holds all the vertexs needed to make a model</param>
+            /// <param name="CullDistance">Distance From Camera Before Shape Isn't rendered</param>
+            public Shape(string shapename, Vector3 position, uint shapenum, uint reflective, uint glowy, string? shaderpath, string? fragmentpath, string? texturepath, Vector3 rotationvector, float size, Vector3 stretch, Vector3 shear, uint Collision,Vector3 momentum,float Restitution,Boolean iseffectedbygravity = false, uint player_control = 0, uint player_num = 1, Boolean ismodel = false,string modelpath = "",float CullDistance = 200)
             {
-                Console.WriteLine("Creating new instance of Shape object");
                 ShapeName = shapename;
                 Position = position;
                 ShapeNum = shapenum;
@@ -386,7 +388,7 @@ namespace HoseRenderer
                 IsEffectedByGravity = iseffectedbygravity;
                 IsModel = ismodel;
                 ModelPath = modelpath;
-
+                Culling_Distance = CullDistance;
 
                 Player_moveable = player_control;
                 Player_scheme = player_num;
@@ -652,6 +654,11 @@ namespace HoseRenderer
                 {
                     return;
                 }
+                if (this.Glcontext == null)
+                {
+                    MainRenderer.EngineLogger.Log("CRITICAL FAILURE OF ENGINE GL IS NULL AT RENDER CALL WHICH CANNOT HAPPEN");
+                    throw new AnomalousObjectException("You done royally fucked up to get here, you've managed to get past the check of having an OPENGL context on compiling and rending, we obviously can't draw the triangles if theres no place to put the fucking things");
+                }
                 var shader = this.CompiledShader;
                 var texture = this.CompiledTexture;
                 var GL = this.Glcontext;
@@ -736,13 +743,43 @@ namespace HoseRenderer
                 }
                 if (this.IsModel)
                 {
-                    shader.SetUniform("uTexture0", 3);
+                    try
+                    {
+                        shader.SetUniform("uTexture0", 3);
+                    }
+                    catch
+                    {
+                        Debugger.Log(1,"Shaders","Shader Doesn't have a vertex+fragment pair that  implements uTexture0 correctly");
+                        MainRenderer.EngineLogger.Log($"//WARN// the shape {this.ShapeName}-{this.ShapeNum} shader is missing the uniform uTexture0, this maybe be ignoreable if the model looks weird then it is probably this causing errors!!");
+                    }
+                    try
+                    {
+                        //This can fail, which is fine as its only used it things want to use it
+                        if (!this.IgnoreTimeUniform) {
+                            shader.SetUniform("time", (float)DateTime.Now.Ticks);
+                        }
+                    }
+                    catch
+                    {
+                        this.IgnoreTimeUniform = true;
+                    }
+                    //TODO Make this avoid rendering verticies who are far away from the CULL distance to try and help the compute resources on the GPU
                     foreach (var mesh in this.Model.Meshes)
                     {
                         mesh.Bind();
                         shader.use();
                         texture.Bind();
-                        shader.SetUniform("uTexture0", 0);
+                        try
+                        {
+                            shader.SetUniform("uTexture0", 0);
+                        }
+                        catch { }
+                        try {
+                            //This can fail, which is fine as its only used it things want to use it
+                            if (!this.IgnoreTimeUniform) {
+                                shader.SetUniform("time", (float)DateTime.Now.Ticks);
+                            }
+                        } catch { }
                         shader.SetUniform("uModel", Magic_Matrix);
                         shader.SetUniform("uView", camera.GetViewMatrix());
                         shader.SetUniform("uProjection", camera.GetProjectionMatrix());
@@ -767,15 +804,15 @@ namespace HoseRenderer
                 
 
 
-                if (GL == null) {
-                    MainRenderer.EngineLogger.Log("CRITICAL FAILURE OF ENGINE GL IS NULL AT RENDER CALL WHICH CANNOT HAPPEN");
-                    throw new AnomalousObjectException("You done royally fucked up to get here, you've managed to get past the check of having an OPENGL context on compiling and rending, we obviously can't draw the triangles if theres no place to put the fucking things");
-                } else {
-                    if (!this.IsModel) {
-                        GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
-                    }
-                    DebugMessages.PrintDebugMSG("OPENGL is drawing the triangles",Print_debug_msg);
-                }
+                //if (GL == null) {
+                //    MainRenderer.EngineLogger.Log("CRITICAL FAILURE OF ENGINE GL IS NULL AT RENDER CALL WHICH CANNOT HAPPEN");
+                //    throw new AnomalousObjectException("You done royally fucked up to get here, you've managed to get past the check of having an OPENGL context on compiling and rending, we obviously can't draw the triangles if theres no place to put the fucking things");
+                //} else {
+                //    if (!this.IsModel) {
+                //        GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
+                //    }
+                //    DebugMessages.PrintDebugMSG("OPENGL is drawing the triangles",Print_debug_msg);
+                //}
             }
             /// <summary>
             /// a method to make sure all Vector3 are updated to keep a seamless state if somewhere else needs to use this (like .render() that needs it for matrix math) and build/update the BB with the shape state
